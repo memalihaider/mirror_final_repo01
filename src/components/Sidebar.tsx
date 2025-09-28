@@ -364,10 +364,11 @@ const navItems: {
   { icon: MessageCircle, label: "Customer Support", href: "/chat", roles: ["admin"], subItems: [] },
   { icon: Building2, label: "Branch Management", href: "/branches", roles: ["admin", "user"], subItems: [] },
   { icon: CreditCard, label: "Membership Plans", href: "/membership", roles: ["admin", "user"], subItems: [] },
-  { icon: FileText, label: "Membership Reports", href: "/membershipReport", roles: ["admin", "user"], subItems: [] },
+  { icon: FileText, label: "Membership & LoyaltyPoints Reports", href: "/membershipReport", roles: ["admin", "user"], subItems: [] },
 
   // Staff Management
   { icon: UserCheck, label: "Staff Management", href: "/staff", roles: ["admin", "user"], subItems: [] },
+  { icon: UserCheck, label: "Booking Approval Page", href: "/bookingstatus", roles: ["admin", "user"], subItems: [] },
   { icon: ClipboardList, label: "Daily Tasks", href: "/staffDailyTasks", roles: ["admin", "user"], subItems: [] },
   { icon: BarChart3, label: "Business Reports", href: "/reports", roles: ["admin", "user"], subItems: [] },
   
