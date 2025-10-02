@@ -18,6 +18,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import AccessWrapper from "@/components/AccessWrapper";
 
 // -------- Types --------
 type Membership = {
@@ -226,6 +227,7 @@ export default function MembershipsPage() {
 
   // -------- Render --------
   return (
+    <AccessWrapper>
     <div className="p-6 max-w-5xl mx-auto space-y-10">
       {/* Memberships Section */}
       {/* ---------- MEMBERSHIPS JSX ---------- */}
@@ -367,6 +369,7 @@ export default function MembershipsPage() {
               </div>
             ))}
           </div>
+          
         )}
       </div>
 
@@ -497,5 +500,6 @@ export default function MembershipsPage() {
         )}
       </AnimatePresence>
     </div>
+    </AccessWrapper>
   );
 }
