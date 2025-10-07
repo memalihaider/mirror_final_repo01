@@ -1,4 +1,4 @@
-// new code
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -81,14 +81,14 @@ interface User {
 /* --------------------------- Constants --------------------------- */
 
 const BRANCH_OPTIONS = [
-  "Al Bustan",
+  "AI Bustaan",
   "Marina",
   "TECOM",
   "AL Muraqabat",
   "IBN Batutta Mall",
 ];
 const CATEGORY_OPTIONS = ["Facial", "Hair", "Nails", "Lashes", "Massage"];
-const PAYMENT_METHODS = ["cash", "card"];
+const PAYMENT_METHODS = ["cash", "card", "tabby", "tamara", "apple pay","google pay","samsung wallet","paypal","american express","ewallet STC pay","bank transfer","cash on delivery","other"];
 
 // Fallback staff list (used only if Firestore `staff` collection not available)
 const STAFF_FALLBACK = ["Komal", "Shameem", "Do Thi Kim", "Alishba"];
@@ -149,14 +149,24 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [loading, setLoading] = useState(true);
+
+
+  // 👇 Added for Tip / Discount / Payment Methods
+const [tip, setTip] = useState(0);
+const [discount, setDiscount] = useState(0);
+const [paymentMethods, setPaymentMethods] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState("");
   
   const [statusFilter, setStatusFilter] = useState<string>("all");
-
   // Create/Edit modal
   const [showCreate, setShowCreate] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Invoice modal state
@@ -171,6 +181,7 @@ export default function BookingsPage() {
   const [serviceTime, setServiceTime] = useState<string>("10:00"); // "HH:mm"
   const [customerName, setCustomerName] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
+  const [customPaymentMethod, setCustomPaymentMethod] = useState<string>("");
 
   const [emailConfirmation, setEmailConfirmation] = useState(false);
   const [smsConfirmation, setSmsConfirmation] = useState(false);
@@ -247,14 +258,74 @@ const [serviceOptions, setServiceOptions] = useState<any[]>([]);
 
   const STAFF_OPTIONS = staffFromDB; // used everywhere below
 
-  /* -------------------- Load bookings (Realtime) -------------------- */
+  /* -------------------- NEW: Branches & Filters -------------------- */
+  // 👇 Added: Fetch payment methods from Firestore
+useEffect(() => {
+  const fetchPaymentMethods = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "paymentMethods"));
+      const methods = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPaymentMethods(methods);
+    } catch (error) {
+      console.error("Error fetching payment methods:", error);
+    }
+  };
+  fetchPaymentMethods();
+}, []);
+
+
+  // Branches from Firestore
+  const [branchesFromDB, setBranchesFromDB] = useState<string[]>([]);
+
+  // Filter states (do not conflict with existing 'staff' state)
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
+  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>("");
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>("");
+  const [selectedCustomerFilter, setSelectedCustomerFilter] = useState<string>("");
+  const [selectedTimeInterval, setSelectedTimeInterval] = useState<string>("");
+
+  // Unique booking times (populate time dropdown)
+  const uniqueTimes = useMemo(() => {
+    const times = bookings.map((b) => b.bookingTime).filter(Boolean);
+    return Array.from(new Set(times)).sort();
+  }, [bookings]);
+
+  useEffect(() => {
+    const loadBranches = async () => {
+      try {
+        const snap = await getDocs(collection(db, "branches"));
+        const list: string[] = [];
+        snap.forEach((d) => {
+          const data = d.data() as any;
+          if (data?.name) list.push(String(data.name));
+        });
+        setBranchesFromDB(list);
+      } catch (e) {
+        console.error("Error loading branches:", e);
+        setBranchesFromDB(BRANCH_OPTIONS); // fallback to your constant list
+      }
+    };
+
+   
+    const loadStaffObjects = async () => {
+      try {
+        const snap = await getDocs(collection(db, "staff"));
+        // no need to overwrite your staffFromDB which is used elsewhere
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    loadBranches();
+    loadStaffObjects();
+  }, []);
 
   /* -------------------- Load bookings (Realtime) -------------------- */
- 
 
- 
-
-      useEffect(() => {
+  useEffect(() => {
   const bookingsQuery = query(
     collection(db, "bookings"),
     orderBy("createdAt", "desc")
@@ -300,6 +371,8 @@ const [serviceOptions, setServiceOptions] = useState<any[]>([]);
         loyaltyPointsUsed: data.loyaltyPointsUsed || 0,
         tipAmount: data.tipAmount || 0,
         rawData: data,
+        discount: data.discount || 0, // ✅ Add here
+
       } as Booking;
     });
 
@@ -325,208 +398,231 @@ useEffect(() => {
   fetchServices();
 }, []);
 
-  /* ------------------------- Load user details ------------------------- */
-  useEffect(() => {
-    const loadUsers = async () => {
-      const usersQuery = query(collection(db, "users"));
-      const usersSnapshot = await getDocs(usersQuery);
-      const usersData: { [key: string]: User } = {};
+/* ------------------------- Load user details ------------------------- */
+useEffect(() => {
+  const loadUsers = async () => {
+    const usersQuery = query(collection(db, "users"));
+    const usersSnapshot = await getDocs(usersQuery);
+    const usersData: { [key: string]: User } = {};
 
-      usersSnapshot.docs.forEach((doc) => {
-        const data = doc.data() as any;
-        usersData[doc.id] = {
-          id: doc.id,
-          name: data.name || data.displayName || "Unknown User",
-          email: data.email || "",
-          phone: data.phone || data.phoneNumber || "",
-        };
-      });
+    usersSnapshot.docs.forEach((doc) => {
+      const data = doc.data() as any;
+      usersData[doc.id] = {
+        id: doc.id,
+        name: data.name || data.displayName || "Unknown User",
+        email: data.email || "",
+        phone: data.phone || data.phoneNumber || "",
+      };
+    });
 
-      setUsers(usersData);
-    };
+    setUsers(usersData);
+  };
 
-    loadUsers();
-  }, []);
+  loadUsers();
+}, []);
 
-  /* --------------------------- Filtering logic -------------------------- */
-  const filteredBookings = bookings.filter((booking) => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch =
-      booking.customerName.toLowerCase().includes(q) ||
-      booking.branch.toLowerCase().includes(q) ||
-      booking.services.some((s) => s.serviceName.toLowerCase().includes(q));
+/* --------------------------- Filtering logic -------------------------- */
+// Extended filtering: search/status + new filter bar values
+const filteredBookings = bookings.filter((booking) => {
+  const q = searchTerm.toLowerCase();
+  const matchesSearch =
+    booking.customerName.toLowerCase().includes(q) ||
+    booking.branch.toLowerCase().includes(q) ||
+    booking.services.some((s) => s.serviceName.toLowerCase().includes(q));
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      booking.status === (statusFilter as BookingStatus);
+  const matchesStatus =
+    statusFilter === "all" ||
+    booking.status === (statusFilter as BookingStatus);
 
-    return matchesSearch && matchesStatus;
-  });
+  const matchesBranch =
+    !selectedBranch || selectedBranch === "" || booking.branch === selectedBranch;
 
-  // const saveInvoiceToFirebase = async (invoiceData) => {
-  //   try {
-  //     await addDoc(collection(db, "invoices"), {
-  //       ...invoiceData,
-  //       createdAt: new Date(),
-  //     });
-  //     console.log("Invoice saved to Firebase!");
-  //   } catch (err) {
-  //     console.error("Error saving invoice:", err);
-  //   }
-  // };
-  const saveInvoiceToFirebase = async (invoiceData) => {
-    try {
-      // Agar userId empty ho, to random UUID generate karo
-      const userId = invoiceData.userId || uuidv4();
+  const matchesStaff =
+    !selectedStaffFilter || selectedStaffFilter === "" || (booking.staff ? booking.staff === selectedStaffFilter : false);
 
-      await addDoc(collection(db, "invoices"), {
-        ...invoiceData,
-        userId, // yaha ensure kar rahe ke hamesha value ho
-         bookingId: invoiceData.id, // ✅ Add this line
-        createdAt: new Date(),
-      });
-      console.log("Invoice saved to Firebase with userId:", userId);
-    } catch (err) {
-      console.error("Error saving invoice:", err);
+  const matchesDate =
+    !selectedDateFilter ||
+    selectedDateFilter === "" ||
+    format(booking.bookingDate, "yyyy-MM-dd") === selectedDateFilter;
+
+  const matchesCustomer =
+    !selectedCustomerFilter ||
+    selectedCustomerFilter === "" ||
+    booking.customerName.toLowerCase().includes(selectedCustomerFilter.toLowerCase());
+
+  const matchesTime =
+    !selectedTimeInterval ||
+    selectedTimeInterval === "" ||
+    booking.bookingTime === selectedTimeInterval;
+
+  return matchesSearch && matchesStatus && matchesBranch && matchesStaff && matchesDate && matchesCustomer && matchesTime;
+});
+
+const saveInvoiceToFirebase = async (invoiceData) => {
+  try {
+    // Agar userId empty ho, to random UUID generate karo
+    const userId = invoiceData.userId || uuidv4();
+
+    await addDoc(collection(db, "invoices"), {
+      ...invoiceData,
+      userId, // yaha ensure kar rahe ke hamesha value ho
+       bookingId: invoiceData.id, // ✅ Add this line
+      createdAt: new Date(),
+    });
+    console.log("Invoice saved to Firebase with userId:", userId);
+  } catch (err) {
+    console.error("Error saving invoice:", err);
+  }
+};
+
+/* --------------------------- Update helpers --------------------------- */
+const updateBookingStatus = async (
+  bookingId: string,
+  newStatus: BookingStatus
+) => {
+  try {
+    const bookingRef = doc(db, "bookings", bookingId);
+    await updateDoc(bookingRef, {
+      status: newStatus,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating booking status:", error);
+    alert("Failed to update status.");
+  }
+};
+
+const getStatusBadge = (s: string) => {
+  switch (s) {
+    case "upcoming":
+      return "bg-blue-100 text-blue-800";
+    case "past":
+      return "bg-green-100 text-green-800";
+    case "cancelled":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+const getStatusBlock = (s: BookingStatus) => {
+  switch (s) {
+    case "upcoming":
+      return "bg-emerald-50 border-emerald-300 text-emerald-800";
+    case "past":
+      return "bg-gray-50 border-gray-300 text-gray-700";
+    case "cancelled":
+      return "bg-rose-50 border-rose-300 text-rose-800 line-through";
+    default:
+      return "bg-slate-50 border-slate-300 text-slate-800";
+  }
+};
+
+const getPaymentIcon = (method: string) => {
+  switch (method.toLowerCase()) {
+    case "card":
+    case "credit":
+    case "debit":
+      return <CreditCard className="w-4 h-4" />;
+    default:
+      return <CreditCard className="w-4 h-4" />;
+  }
+};
+
+/* -------------------------- Create/Edit Handlers ------------------------- */
+
+const resetForm = () => {
+  setBranch(BRANCH_OPTIONS[0]);
+  setServiceDate(format(new Date(), "yyyy-MM-dd"));
+  setServiceTime("10:00");
+  setCustomerName("");
+  setPaymentMethod("cash");
+  setCustomPaymentMethod("");
+  setEmailConfirmation(false);
+  setSmsConfirmation(false);
+  setStatus("upcoming");
+  setStaff("");
+  setServices([{ ...emptyService }]);
+  setRemarks("");
+  setEditingId(null);
+  setCustomerEmail("");
+  setTip("");
+  setDiscount("");
+};
+
+const openForCreate = () => {
+  resetForm();
+  setShowCreate(true);
+};
+
+// Open modal to CREATE, but prefill staff+time from a grid cell
+const openForCreateFromCell = (prefillStaff: string, prefillTime: string) => {
+  // If hour disabled, do nothing
+  const hour = prefillTime.split(":")[0];
+  if (!enabledHours[hour]) return;
+
+  resetForm();
+  setStaff(prefillStaff);
+  setServiceTime(prefillTime);
+  // Set serviceDate to scheduleDate (board date)
+  setServiceDate(scheduleDate);
+  setShowCreate(true);
+};
+
+
+
+const openForEdit = (b: Booking) => {
+  setEditingId(b.id);
+  setShowCreate(true); // OPEN MODAL FIRST
+
+  setBranch(b.branch || BRANCH_OPTIONS[0]);
+  setServiceDate(format(b.bookingDate, "yyyy-MM-dd"));
+  setServiceTime(b.bookingTime || "10:00");
+  setCustomerName(b.customerName || "");
+  setPaymentMethod(b.paymentMethod || "cash");
+  setEmailConfirmation(!!b.emailConfirmation);
+  setSmsConfirmation(!!b.smsConfirmation);
+  setStatus(b.status || "upcoming");
+  setStaff(b.staff || "");
+  setServices(
+    b.services && b.services.length > 0
+      ? b.services.map((s) => ({
+          serviceId: s.serviceId || "",
+          serviceName: s.serviceName || "",
+          category: s.category || "",
+          duration: Number(s.duration) || 0,
+          price: Number(s.price) || 0,
+          quantity: Number(s.quantity) || 1,
+        }))
+      : [{ ...emptyService }]
+  );
+  setRemarks(b.remarks || "");
+  setCustomerEmail(b.customerEmail || "");
+
+  setTip(b.tipAmount ?? 0);
+  setDiscount(b.discount ?? 0);
+};
+
+useEffect(() => {
+  if (showCreate && editingId) {
+    const booking = bookings.find((b) => b.id === editingId);
+    if (booking) {
+      setDiscount(booking.discount ?? 0);
+      setTip(booking.tipAmount ?? 0);
     }
-  };
+  }
+}, [showCreate, editingId]);
 
-  /* --------------------------- Update helpers --------------------------- */
-  const updateBookingStatus = async (
-    bookingId: string,
-    newStatus: BookingStatus
-  ) => {
-    try {
-      const bookingRef = doc(db, "bookings", bookingId);
-      await updateDoc(bookingRef, {
-        status: newStatus,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error updating booking status:", error);
-      alert("Failed to update status.");
-    }
-  };
 
-  const getStatusBadge = (s: string) => {
-    switch (s) {
-      case "upcoming":
-        return "bg-blue-100 text-blue-800";
-      case "past":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
-  const getStatusBlock = (s: BookingStatus) => {
-    switch (s) {
-      case "upcoming":
-        return "bg-emerald-50 border-emerald-300 text-emerald-800";
-      case "past":
-        return "bg-gray-50 border-gray-300 text-gray-700";
-      case "cancelled":
-        return "bg-rose-50 border-rose-300 text-rose-800 line-through";
-      default:
-        return "bg-slate-50 border-slate-300 text-slate-800";
-    }
-  };
+const handleAddServiceRow = () => {
+  setServices((prev) => [...prev, { ...emptyService }]);
+};
 
-  const getPaymentIcon = (method: string) => {
-    switch (method.toLowerCase()) {
-      case "card":
-      case "credit":
-      case "debit":
-        return <CreditCard className="w-4 h-4" />;
-      default:
-        return <CreditCard className="w-4 h-4" />;
-    }
-  };
+const handleRemoveServiceRow = (index: number) => {
+  setServices((prev) => prev.filter((_, i) => i !== index));
+};
 
-  /* -------------------------- Create/Edit Handlers ------------------------- */
-
-  const resetForm = () => {
-    setBranch(BRANCH_OPTIONS[0]);
-    setServiceDate(format(new Date(), "yyyy-MM-dd"));
-    setServiceTime("10:00");
-    setCustomerName("");
-    setPaymentMethod("cash");
-    setEmailConfirmation(false);
-    setSmsConfirmation(false);
-    setStatus("upcoming");
-    setStaff("");
-    setServices([{ ...emptyService }]);
-    setRemarks("");
-    setEditingId(null);
-    setCustomerEmail("");
-  };
-
-  const openForCreate = () => {
-    resetForm();
-    setShowCreate(true);
-  };
-
-  // Open modal to CREATE, but prefill staff+time from a grid cell
-  const openForCreateFromCell = (prefillStaff: string, prefillTime: string) => {
-    // If hour disabled, do nothing
-    const hour = prefillTime.split(":")[0];
-    if (!enabledHours[hour]) return;
-
-    resetForm();
-    setStaff(prefillStaff);
-    setServiceTime(prefillTime);
-    // Set serviceDate to scheduleDate (board date)
-    setServiceDate(scheduleDate);
-    setShowCreate(true);
-  };
-
-  const openForEdit = (b: Booking) => {
-    setEditingId(b.id);
-    setBranch(b.branch || BRANCH_OPTIONS[0]);
-    setServiceDate(format(b.bookingDate, "yyyy-MM-dd"));
-    setServiceTime(b.bookingTime || "10:00");
-    setCustomerName(b.customerName || "");
-    setPaymentMethod(b.paymentMethod || "cash");
-    setEmailConfirmation(!!b.emailConfirmation);
-    setSmsConfirmation(!!b.smsConfirmation);
-    setStatus(b.status || "upcoming");
-    setStaff(b.staff || "");
-    setServices(
-      b.services && b.services.length > 0
-        ? b.services.map((s) => ({
-            serviceId: s.serviceId || "",
-            serviceName: s.serviceName || "",
-            category: s.category || "",
-            duration: Number(s.duration) || 0,
-            price: Number(s.price) || 0,
-            quantity: Number(s.quantity) || 1,
-          }))
-        : [{ ...emptyService }]
-    );
-    setRemarks(b.remarks || "");
-    setCustomerEmail(b.customerEmail || "");
-    setShowCreate(true);
-  };
-
-  const handleAddServiceRow = () => {
-    setServices((prev) => [...prev, { ...emptyService }]);
-  };
-
-  const handleRemoveServiceRow = (index: number) => {
-    setServices((prev) => prev.filter((_, i) => i !== index));
-  };
-
-//   const handleServiceChange = (
-//     index: number,
-//     field: keyof BookingService,
-//     value: string | number
-//   ) => {
-//     setServices((prev) =>
-//       prev.map((s, i) => (i === index ? { ...s, [field]: value } : s))
-//     );
-//   };
 const handleServiceChange = (idx: number, field: string, value: any) => {
   setServices((prev) =>
     prev.map((s, i) => {
@@ -555,109 +651,114 @@ const handleServiceChange = (idx: number, field: string, value: any) => {
 };
 
 
-  const formTotals = calcTotals(services);
+const formTotals = calcTotals(services);
 
-  const validateForm = () => {
-    if (!customerName.trim()) return "Customer name is required";
-    if (!serviceDate) return "Service date is required";
-    if (!serviceTime) return "Service time is required";
-    if (!branch) return "Branch is required";
-    if (!staff) return "Staff is required";
-    if (services.length === 0) return "Add at least one service";
-    const hasName = services.every((s) => s.serviceName.trim().length > 0);
-    if (!hasName) return "Each service must have a name";
-    // also ensure selected time hour is enabled
-    const selectedHour = serviceTime.split(":")[0];
-    if (!enabledHours[selectedHour])
-      return "Selected time falls into a disabled hour";
-    return null;
-  };
+const validateForm = () => {
+  if (!customerName.trim()) return "Customer name is required";
+  if (!serviceDate) return "Service date is required";
+  if (!serviceTime) return "Service time is required";
+  if (!branch) return "Branch is required";
+  if (!staff) return "Staff is required";
+  if (services.length === 0) return "Add at least one service";
+  const hasName = services.every((s) => s.serviceName.trim().length > 0);
+  if (!hasName) return "Each service must have a name";
+  // also ensure selected time hour is enabled
+  const selectedHour = serviceTime.split(":")[0];
+  if (!enabledHours[selectedHour])
+    return "Selected time falls into a disabled hour";
+  return null;
+};
 
-  const saveBooking = async () => {
-    const err = validateForm();
-    if (err) {
-      alert(err);
-      return;
+const saveBooking = async () => {
+  const err = validateForm();
+  if (err) {
+    alert(err);
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    const payload = {
+      //userId: "",
+       userId: uuidv4(), 
+      customerName: customerName.trim(),
+      services: services.map((s) => ({
+        ...s,
+        price: Number(s.price) || 0,
+        duration: Number(s.duration) || 0,
+        quantity: Number(s.quantity) || 0,
+      })),
+      bookingDate: Timestamp.fromDate(new Date(serviceDate + "T00:00:00")),
+      bookingTime: serviceTime, // "HH:mm"
+      branch,
+      customerEmail: customerEmail.trim(), // add this
+      staff: staff || null, // name string
+      totalPrice: formTotals.totalPrice,
+      totalDuration: formTotals.totalDuration,
+      status,
+      paymentMethod: paymentMethod === "custom" ? customPaymentMethod : paymentMethod,
+      emailConfirmation,
+      smsConfirmation,
+      updatedAt: serverTimestamp(),
+      remarks: remarks || null,
+     tipAmount: Number(tip) || 0,
+discount: Number(discount) || 0,
+
+      
+
+    };
+
+    if (editingId) {
+      const ref = doc(db, "bookings", editingId);
+      await updateDoc(ref, payload);
+    } else {
+      await addDoc(collection(db, "bookings"), {
+        ...payload,
+        createdAt: serverTimestamp(),
+      });
     }
 
-    try {
-      setSaving(true);
+    setShowCreate(false);
+    resetForm();
+  } catch (e) {
+    console.error("Error saving booking:", e);
+    alert("Failed to save booking. Check console for details.");
+  } finally {
+    setSaving(false);
+  }
+};
 
-      const payload = {
-        //userId: "",
-         userId: uuidv4(), 
-        customerName: customerName.trim(),
-        services: services.map((s) => ({
-          ...s,
-          price: Number(s.price) || 0,
-          duration: Number(s.duration) || 0,
-          quantity: Number(s.quantity) || 0,
-        })),
-        bookingDate: Timestamp.fromDate(new Date(serviceDate + "T00:00:00")),
-        bookingTime: serviceTime, // "HH:mm"
-        branch,
-        customerEmail: customerEmail.trim(), // add this
-        staff: staff || null, // name string
-        totalPrice: formTotals.totalPrice,
-        totalDuration: formTotals.totalDuration,
-        status,
-        paymentMethod,
-        emailConfirmation,
-        smsConfirmation,
-        updatedAt: serverTimestamp(),
-        remarks: remarks || null,
-      };
+const deleteBooking = async () => {
+  if (!editingId) return;
+  if (!confirm("Delete this booking? This action cannot be undone.")) return;
 
-      if (editingId) {
-        const ref = doc(db, "bookings", editingId);
-        await updateDoc(ref, payload);
-      } else {
-        await addDoc(collection(db, "bookings"), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
-      }
+  try {
+    setDeleting(true);
+    await deleteDoc(doc(db, "bookings", editingId));
+    setShowCreate(false);
+    resetForm();
+  } catch (e) {
+    console.error("Error deleting booking:", e);
+    alert("Failed to delete booking.");
+  } finally {
+    setDeleting(false);
+  }
+};
 
-      setShowCreate(false);
-      resetForm();
-    } catch (e) {
-      console.error("Error saving booking:", e);
-      alert("Failed to save booking. Check console for details.");
-    } finally {
-      setSaving(false);
-    }
-  };
+/* ------------------------------ Schedule Board Data ------------------------------ */
 
-  const deleteBooking = async () => {
-    if (!editingId) return;
-    if (!confirm("Delete this booking? This action cannot be undone.")) return;
+const bookingsForSchedule = useMemo(() => {
+  const target = new Date(scheduleDate + "T00:00:00");
+  return filteredBookings.filter((b) => {
+    const sameDay = isSameDay(b.bookingDate, target);
+    const branchOk = scheduleBranch === "all" || b.branch === scheduleBranch;
+    return sameDay && branchOk;
+  });
+}, [filteredBookings, scheduleDate, scheduleBranch]);
 
-    try {
-      setDeleting(true);
-      await deleteDoc(doc(db, "bookings", editingId));
-      setShowCreate(false);
-      resetForm();
-    } catch (e) {
-      console.error("Error deleting booking:", e);
-      alert("Failed to delete booking.");
-    } finally {
-      setDeleting(false);
-    }
-  };
+// fast lookup: { 'HH:mm': { staffName: Booking[] } }
 
-  /* ------------------------------ Schedule Board Data ------------------------------ */
-
-  const bookingsForSchedule = useMemo(() => {
-    const target = new Date(scheduleDate + "T00:00:00");
-    return bookings.filter((b) => {
-      const sameDay = isSameDay(b.bookingDate, target);
-      const branchOk = scheduleBranch === "all" || b.branch === scheduleBranch;
-      return sameDay && branchOk;
-    });
-  }, [bookings, scheduleDate, scheduleBranch]);
-
-  // fast lookup: { 'HH:mm': { staffName: Booking[] } }
- 
 const scheduleMatrix = useMemo(() => {
   const map: Record<string, Record<string, Booking[]>> = {};
 
@@ -667,7 +768,7 @@ const scheduleMatrix = useMemo(() => {
     STAFF_OPTIONS.forEach((s) => (map[t][s] = []));
     map[t]["Unassigned"] = [];
   });
-bookings.forEach((b) => {
+filteredBookings.forEach((b) => {
   let bookingDateObj: Date;
 
   if (b.bookingDate instanceof Date) {
@@ -700,16 +801,29 @@ bookings.forEach((b) => {
 });
 
 return map;
-}, [bookings, scheduleDate, scheduleBranch, STAFF_OPTIONS, enabledHours]);
+}, [filteredBookings, scheduleDate, scheduleBranch, STAFF_OPTIONS, enabledHours]);
 
-  
 
   /* -------------------------- Invoice Helpers ------------------------- */
 
-  const openInvoice = (booking: Booking) => {
-    setInvoiceData(booking);
-    setShowInvoice(true);
-  };
+  // const openInvoice = (booking: Booking) => {
+  //   setInvoiceData(booking);
+  //   setShowInvoice(true);
+  // };
+
+
+const openInvoice = (booking: Booking) => {
+  setInvoiceData({
+    ...booking,
+    tip: booking.tipAmount || 0,      // rename to match invoice JSX
+    discount: booking.discount || 0,  // ensure discount exists
+    totalPrice: booking.totalPrice || 0,
+  });
+  setShowInvoice(true);
+};
+
+
+
 
   const downloadInvoicePDF = async () => {
     const input = document.getElementById("invoice-content");
@@ -762,7 +876,7 @@ return map;
   return (
     <AccessWrapper>
       <div>
-        <div className="max-w-6xl mx-auto dark:text-white">
+        <div className="max-w-6xl mx-auto dark:text-white ">
           {/* Header */}
           <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 animate-gradient-x">
             <div className="absolute inset-0 bg-black/20"></div>
@@ -822,7 +936,100 @@ return map;
             <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-white/5 rounded-full animate-bounce-subtle"></div>
           </div>
 
-          {/* Schedule Board Controls */}
+          {/* 🔽 FILTER BAR (ADDED) 🔽 */}
+          <div className="mb-6">
+            <div className="w-full flex flex-wrap items-center gap-3 mb-4 bg-white/80 dark:bg-slate-800/60 p-4 rounded-2xl shadow-sm">
+              {/* Branch */}
+              <div>
+                <label className="text-xs block mb-1">Branch</label>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="border rounded-lg px-3 py-2"
+                >
+                  <option value="">All Branches</option>
+                  {/* prefer DB branches; fallback to BRANCH_OPTIONS */}
+                  {(branchesFromDB.length ? branchesFromDB : BRANCH_OPTIONS).map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Staff */}
+              <div>
+                <label className="text-xs block mb-1">Staff</label>
+                <select
+                  value={selectedStaffFilter}
+                  onChange={(e) => setSelectedStaffFilter(e.target.value)}
+                  className="border rounded-lg px-3 py-2"
+                >
+                  <option value="">All Staff</option>
+                  {STAFF_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="text-xs block mb-1">Date</label>
+                <input
+                  type="date"
+                  value={selectedDateFilter}
+                  onChange={(e) => setSelectedDateFilter(e.target.value)}
+                  className="border rounded-lg px-3 py-2"
+                />
+              </div>
+
+              {/* Customer */}
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-xs block mb-1">Customer</label>
+                <input
+                  type="text"
+                  placeholder="Search customer"
+                  value={selectedCustomerFilter}
+                  onChange={(e) => setSelectedCustomerFilter(e.target.value)}
+                  className="border rounded-lg px-3 py-2 w-full"
+                />
+              </div>
+
+              {/* Time Interval */}
+              <div>
+                <label className="text-xs block mb-1">Time</label>
+                <select
+                  value={selectedTimeInterval}
+                  onChange={(e) => setSelectedTimeInterval(e.target.value)}
+                  className="border rounded-lg px-3 py-2"
+                >
+                  <option value="">All Times</option>
+                  {uniqueTimes.map((time) => (
+                    <option key={time} value={time}>
+                      {toDisplayAMPM(time)} ({time})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Clear filters button */}
+              <div className="ml-auto self-end">
+                <button
+                  onClick={() => {
+                    setSelectedBranch("");
+                    setSelectedStaffFilter("");
+                    setSelectedDateFilter("");
+                    setSelectedCustomerFilter("");
+                    setSelectedTimeInterval("");
+                  }}
+                  className="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* 🔼 FILTER BAR (ADDED) 🔼 */}
+
+          {/* Unified Schedule Dashboard & Statistics */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-white/20 shadow-xl backdrop-blur-sm p-6 mb-6 w-[1000px] animate-fade-in">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
             
@@ -830,178 +1037,179 @@ return map;
             <div className="relative mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg animate-float">
-                  <Clock className="w-5 h-5 text-white" />
+                  <Calendar className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">Schedule Controls</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Schedule Dashboard & Controls</h3>
                 <div className="flex-1 h-px bg-gradient-to-r from-indigo-200 via-purple-200 to-transparent"></div>
               </div>
             </div>
 
-            <div className="relative grid grid-cols-1 md:grid-cols-4 gap-6">
-              {/* Date Filter */}
-              <div className="group">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Schedule Date
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={scheduleDate}
-                    onChange={(e) => setScheduleDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/90 transition-all duration-300 shadow-lg hover:shadow-xl group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            {/* Stats Cards Section */}
+            <div className="relative mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-600 shadow-md animate-pulse-slow">
+                  <CheckCircle className="w-4 h-4 text-white" />
                 </div>
+                <h4 className="text-sm font-medium text-gray-700">Booking Statistics</h4>
+                <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent"></div>
               </div>
-
-              {/* Branch Filter */}
-              <div className="group">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Branch Location
-                </label>
-                <div className="relative">
-                  <select
-                    value={scheduleBranch}
-                    onChange={(e) => setScheduleBranch(e.target.value)}
-                    className="w-full appearance-none px-4 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl border border-gray-600 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer group-hover:scale-105"
-                  >
-                    <option value="all">All Branches</option>
-                    {BRANCH_OPTIONS.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hour Toggles */}
-              <div className="md:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 shadow-md animate-pulse-slow">
-                    <Clock className="w-4 h-4 text-white" />
-                  </div>
-                  <h4 className="text-sm font-medium text-gray-700">Available Hours</h4>
-                  <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent"></div>
-                </div>
-                
-                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
-                  {uniqueHours.map((h, index) => (
-                    <label key={h} className="group relative cursor-pointer animate-fade-in-delay" style={{ animationDelay: `${index * 50}ms` }}>
-                      <input
-                        type="checkbox"
-                        checked={!!enabledHours[h]}
-                        onChange={(e) =>
-                          setEnabledHours((prev) => ({
-                            ...prev,
-                            [h]: e.target.checked,
-                          }))
-                        }
-                        className="sr-only"
-                      />
-                      <div className={`
-                        relative px-3 py-2 rounded-xl text-xs font-medium text-center transition-all duration-300 transform
-                        ${enabledHours[h] 
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg scale-105 animate-bounce-gentle' 
-                          : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-gray-50 hover:scale-105'
-                        }
-                        group-hover:shadow-xl
-                      `}>
-                        <div className="flex items-center justify-center gap-1">
-                          {enabledHours[h] && (
-                            <CheckCircle className="w-3 h-3 animate-spin-slow" />
-                          )}
-                          <span>{toDisplayAMPM(`${h}:00`)}</span>
-                        </div>
-                        
-                        {/* Toggle indicator */}
-                        <div className={`
-                          absolute -top-1 -right-1 w-3 h-3 rounded-full transition-all duration-300
-                          ${enabledHours[h] 
-                            ? 'bg-green-400 animate-ping' 
-                            : 'bg-gray-300 opacity-0 group-hover:opacity-100'
-                          }
-                        `}></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 via-white to-blue-100 border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5"></div>
+                  <div className="relative p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-300">
+                        <Calendar className="w-4 h-4 text-white" />
                       </div>
-                    </label>
-                  ))}
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600 group-hover:text-blue-700 transition-colors duration-300">
+                          Total Bookings
+                        </p>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                          {filteredBookings.length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                {/* Toggle All Controls */}
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() => setEnabledHours(Object.fromEntries(uniqueHours.map(h => [h, true])))}
-                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 animate-fade-in-delay-2"
-                  >
-                    Enable All
-                  </button>
-                  <button
-                    onClick={() => setEnabledHours(Object.fromEntries(uniqueHours.map(h => [h, false])))}
-                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 animate-fade-in-delay-3"
-                  >
-                    Disable All
-                  </button>
+
+                <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-green-50 via-white to-emerald-100 border border-green-200/50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-emerald-500/5"></div>
+                  <div className="relative p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-300">
+                        <CheckCircle className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600 group-hover:text-green-700 transition-colors duration-300">Upcoming</p>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                          {filteredBookings.filter((b) => b.status === "upcoming").length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 via-white to-yellow-100 border border-amber-200/50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-yellow-500/5"></div>
+                  <div className="relative p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-300">
+                        <AlertCircle className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600 group-hover:text-amber-700 transition-colors duration-300">Past</p>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                          {filteredBookings.filter((b) => b.status === "past").length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-red-50 via-white to-rose-100 border border-red-200/50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-rose-500/5"></div>
+                  <div className="relative p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-300">
+                        <XCircle className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600 group-hover:text-red-700 transition-colors duration-300">Cancelled</p>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                          {filteredBookings.filter((b) => b.status === "cancelled").length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Controls Section */}
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 shadow-md animate-pulse-slow">
+                  <Clock className="w-4 h-4 text-white" />
+                </div>
+                <h4 className="text-sm font-medium text-gray-700">Available Hours</h4>
+                <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent"></div>
+              </div>
+              
+              <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                {uniqueHours.map((h, index) => (
+                  <label key={h} className="group relative cursor-pointer animate-fade-in-delay" style={{ animationDelay: `${index * 50}ms` }}>
+                    <input
+                      type="checkbox"
+                      checked={!!enabledHours[h]}
+                      onChange={(e) =>
+                        setEnabledHours((prev) => ({
+                          ...prev,
+                          [h]: e.target.checked,
+                        }))
+                      }
+                      className="sr-only"
+                    />
+                    <div className={`
+                      relative px-3 py-2 rounded-xl text-xs font-medium text-center transition-all duration-300 transform
+                      ${enabledHours[h] 
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg scale-105 animate-bounce-gentle' 
+                        : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-gray-50 hover:scale-105'
+                      }
+                      group-hover:shadow-xl
+                    `}>
+                      <div className="flex items-center justify-center gap-1">
+                        {enabledHours[h] && (
+                          <CheckCircle className="w-3 h-3 animate-spin-slow" />
+                        )}
+                        <span>{toDisplayAMPM(`${h}:00`)}</span>
+                      </div>
+                      
+                      {/* Toggle indicator */}
+                      <div className={`
+                        absolute -top-1 -right-1 w-3 h-3 rounded-full transition-all duration-300
+                        ${enabledHours[h] 
+                          ? 'bg-green-400 animate-ping' 
+                          : 'bg-gray-300 opacity-0 group-hover:opacity-100'
+                        }
+                      `}></div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              
+              {/* Toggle All Controls */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setEnabledHours(Object.fromEntries(uniqueHours.map(h => [h, true])))}
+                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 animate-fade-in-delay-2"
+                >
+                  Enable All
+                </button>
+                <button
+                  onClick={() => setEnabledHours(Object.fromEntries(uniqueHours.map(h => [h, false])))}
+                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 animate-fade-in-delay-3"
+                >
+                  Disable All
+                </button>
               </div>
             </div>
             
             {/* Decorative Elements */}
-             <div className="absolute top-2 right-2 w-16 h-16 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full animate-float-delay"></div>
-             <div className="absolute bottom-2 left-2 w-12 h-12 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full animate-bounce-subtle"></div>
-           </div>
+            <div className="absolute top-2 right-2 w-16 h-16 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full animate-float-delay"></div>
+            <div className="absolute bottom-2 left-2 w-12 h-12 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full animate-bounce-subtle"></div>
+          </div>
 
-          <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-white/20 shadow-xl backdrop-blur-sm w-[1000px] animate-fade-in">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
-            <div className="relative p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg animate-float">
-                  <Search className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800">Search & Filter</h3>
-                <div className="flex-1 h-px bg-gradient-to-r from-blue-200 via-purple-200 to-transparent"></div>
-              </div>
+          
               
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors duration-300" />
-                    <input
-                      type="text"
-                      placeholder="Search by customer name, branch, or service..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/90 transition-all duration-300 placeholder-gray-500 shadow-lg hover:shadow-xl"
-                    />
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                  </div>
-                </div>
 
-                <div className="md:w-48">
-                  <div className="relative group">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full appearance-none bg-gradient-to-r from-gray-800 to-gray-900 text-white px-4 py-3 rounded-xl border border-gray-600 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="upcoming">Upcoming</option>
-                      <option value="past">Past</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                 
+              
               </div>
             </div>
             
@@ -1010,85 +1218,10 @@ return map;
             <div className="absolute bottom-2 left-2 w-12 h-12 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full animate-bounce-subtle"></div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 w-[1000px]">
-            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-white to-blue-100 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-fade-in">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5"></div>
-              <div className="relative p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 animate-float">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 group-hover:text-blue-700 transition-colors duration-300">
-                      Total Bookings
-                    </p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent animate-pulse-slow">
-                      {bookings.length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute top-2 right-2 w-12 h-12 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full animate-bounce-subtle"></div>
-            </div>
 
-            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-50 via-white to-emerald-100 border border-green-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-fade-in-delay">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-emerald-500/5"></div>
-              <div className="relative p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 animate-float-delay">
-                    <CheckCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 group-hover:text-green-700 transition-colors duration-300">Upcoming</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent animate-pulse-slow">
-                      {bookings.filter((b) => b.status === "upcoming").length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute top-2 right-2 w-12 h-12 bg-gradient-to-br from-green-400/20 to-emerald-400/20 rounded-full animate-bounce-subtle"></div>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 via-white to-yellow-100 border border-amber-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-fade-in-delay-2">
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-yellow-500/5"></div>
-              <div className="relative p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 animate-float">
-                    <AlertCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 group-hover:text-amber-700 transition-colors duration-300">Past</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent animate-pulse-slow">
-                      {bookings.filter((b) => b.status === "past").length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute top-2 right-2 w-12 h-12 bg-gradient-to-br from-amber-400/20 to-yellow-400/20 rounded-full animate-bounce-subtle"></div>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-50 via-white to-rose-100 border border-red-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-fade-in-delay-3">
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-rose-500/5"></div>
-              <div className="relative p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-gradient-to-r from-red-500 to-rose-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 animate-float-delay">
-                    <XCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600 group-hover:text-red-700 transition-colors duration-300">Cancelled</p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent animate-pulse-slow">
-                      {bookings.filter((b) => b.status === "cancelled").length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute top-2 right-2 w-12 h-12 bg-gradient-to-br from-red-400/20 to-rose-400/20 rounded-full animate-bounce-subtle"></div>
-            </div>
-          </div>
 
           {/* Schedule Board */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-gray-100 border border-white/20 shadow-2xl backdrop-blur-sm mb-10 w-[1000px] animate-fade-in">
+          <div className="  relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-gray-100 border border-white/20 shadow-2xl backdrop-blur-sm mb-10  animate-fade-in">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
             
             {/* Header with title and decorative elements */}
@@ -1103,12 +1236,12 @@ return map;
               <div className="absolute top-2 right-2 w-12 h-12 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full animate-bounce-subtle"></div>
             </div>
 
-            <div className="relative overflow-x-auto">
-              <div className="min-w-[900px] relative">
+            <div className="relative overflow-x-auto w-full">
+              <div className="w-full relative">
                 <div
                   className="grid sticky top-0 z-20"
                   style={{
-                    gridTemplateColumns: `180px repeat(${STAFF_OPTIONS.length}, 200px)`,
+                    gridTemplateColumns: `180px repeat(${STAFF_OPTIONS.length},  200px)`,
                   }}
                 >
                   <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white border-b border-gray-600 px-4 py-4 font-bold sticky left-0 z-30 shadow-lg">
@@ -1155,63 +1288,62 @@ return map;
 
             {STAFF_OPTIONS.map((sName) => {
                
+// helper: normalize date string to YYYY-MM-DD safely (without timezone shift)
+const formatDate = (dateStr: string | Date) => {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${(d.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+};
 
+// get today's and yesterday's local date
+const today = new Date();
+const yesterday = new Date();
+yesterday.setDate(today.getDate() - 1);
 
+const allowedDates = [formatDate(yesterday), formatDate(today)];
 
-
-
-const normalizedScheduleDate = new Date(scheduleDate)
-  .toISOString()
-  .split("T")[0];
-
-const allItems = bookings.filter((b) => {
-  const bookingDay = new Date(b.bookingDate)
-    .toISOString()
-    .split("T")[0]; // normalize YYYY-MM-DD
+const allItems = filteredBookings.filter((b) => {
+  const bookingDay = formatDate(b.bookingDate);
 
   const normalizeTime = (timeStr: string) => {
     if (!timeStr) return "";
-
     let [hh, mm] = timeStr.split(":");
-
     if (!mm) mm = "00";
-
-    // Handle AM/PM
     const lowerTime = timeStr.toLowerCase();
     const isPM = lowerTime.includes("pm");
     const isAM = lowerTime.includes("am");
-
-    hh = hh.replace(/\D/g, ""); // remove any letters like AM/PM
-
+    hh = hh.replace(/\D/g, "");
     let hourNum = parseInt(hh, 10);
     if (isPM && hourNum !== 12) hourNum += 12;
     if (isAM && hourNum === 12) hourNum = 0;
-
     return `${hourNum.toString().padStart(2, "0")}:${mm.substring(0, 2)}`;
   };
 
   const normalizedBookingTime = normalizeTime(b.bookingTime);
+
+  // booking start and end (minutes from midnight)
+  const [startHour, startMin] = normalizedBookingTime.split(":").map(Number);
+  const bookingStart = startHour * 60 + startMin;
+  const bookingEnd = bookingStart + (b.totalDuration || 30); // default 30 min
+
+  // current slot in minutes
   const normalizedSlotTime = normalizeTime(t);
+  const [slotHour, slotMin] = normalizedSlotTime.split(":").map(Number);
+  const slotMinutes = slotHour * 60 + slotMin;
 
   const staffMatch = b.staff ? b.staff === sName : true;
 
-//   console.log("filter check", {
-//     bookingDay,
-//     normalizedScheduleDate,
-//     normalizedBookingTime,
-//     normalizedSlotTime,
-//     staffMatch,
-//   });
-
+  // ⬇️ NEW CONDITION
   return (
     staffMatch &&
-    bookingDay === normalizedScheduleDate &&
-    normalizedBookingTime === normalizedSlotTime
+    allowedDates.includes(bookingDay) &&
+    slotMinutes >= bookingStart &&
+    slotMinutes < bookingEnd
   );
 });
 
-
-
+  
               return (
                 <div
                   key={`${t}-${sName}`}
@@ -1266,6 +1398,10 @@ const allItems = bookings.filter((b) => {
                           <Clock className="w-3 h-3 mr-1" />
                           {toDisplayAMPM(b.bookingTime)} • {b.totalDuration}m
                         </div>
+                        <div className="flex items-center text-[11px] opacity-80 mt-1">
+                          <CreditCard className="w-3 h-3 mr-1" />
+                          {b.paymentMethod || "cash"}
+                        </div>
                       </button>
                     ))}
 
@@ -1297,6 +1433,7 @@ const allItems = bookings.filter((b) => {
 </div>
 
                      
+
           {filteredBookings.length === 0 && (
             <div className="text-center py-12">
               <Calendar className="mx-auto h-12 w-12 text-gray-400" />
@@ -1311,617 +1448,867 @@ const allItems = bookings.filter((b) => {
             </div>
           )}
         </div>
-
-        {/* ===================== CREATE / EDIT MODAL ===================== */}
-        {showCreate && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto h-full w-full">
-            <div className="relative top-10 mx-auto w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3">
-              <div className="bg-white rounded-lg shadow-xl border">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b">
-                  <h3 className="text-lg font-semibold">
-                    {editingId ? "Edit Schedule" : "Add Schedule"}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {editingId && (
-                      <button
-                        onClick={deleteBooking}
-                        disabled={deleting}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-60"
-                        title="Delete booking"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </button>
-                    )}
-                    {editingId && (
-                      <button
-                        onClick={() => {
-                          const booking = bookings.find(
-                            (b) => b.id === editingId
-                          );
-                          if (booking) openInvoice(booking);
-                        }}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                        title="Generate Invoice"
-                      >
-                        Invoice
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setShowCreate(false);
-                        resetForm();
-                      }}
-                      className="text-gray-400 hover:text-gray-600"
-                      title="Close"
-                    >
-                      <XCircle className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="p-6 space-y-6">
-                  {/* Top selects */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Branch
-                      </label>
-                      <select
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={branch}
-                        onChange={(e) => setBranch(e.target.value)}
-                      >
-                        {BRANCH_OPTIONS.map((b) => (
-                          <option key={b} value={b}>
-                            {b}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Customer Email
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="Customer email"
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Category
-                      </label>
-                     <select
-  className="mt-1 w-full border rounded-md px-3 py-2"
-  onChange={(e) => {
-    setServices((prev) =>
-      prev.map((s, i) =>
-        i === 0 ? { ...s, category: e.target.value } : s
-      )
-    );
-  }}
->
-  <option value="">Select One</option>
-  {Array.from(new Set(serviceOptions.map(s => s.category))).map(c => (
-    <option key={c} value={c}>
-      {c}
-    </option>
-  ))}
-</select>
-
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Staff
-                      </label>
-                      <select
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={staff}
-                        onChange={(e) => setStaff(e.target.value)}
-                      >
-                        <option value="">Select One</option>
-                        {STAFF_OPTIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Payment Method
-                      </label>
-                      <select
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                      >
-                        {PAYMENT_METHODS.map((p) => (
-                          <option key={p} value={p}>
-                            {p.toUpperCase()}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Date & Time */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Service Date
-                      </label>
-                      <input
-                        type="date"
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={serviceDate}
-                        onChange={(e) => setServiceDate(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Time Slot
-                      </label>
-                      <select
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={serviceTime}
-                        onChange={(e) => setServiceTime(e.target.value)}
-                      >
-                        {TIMESLOTS.filter((slot) => {
-                          const hour = slot.split(":")[0];
-                          return !!enabledHours[hour];
-                        }).map((slot) => (
-                          <option key={slot} value={slot}>
-                            {toDisplayAMPM(slot)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Customer
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Customer name"
-                        className="mt-1 w-full border rounded-md px-3 py-2"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Services table */}
-                  <div className="border rounded-lg">
-                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
-                      <div className="col-span-4">Service</div>
-                      <div className="col-span-2">Category</div>
-                      <div className="col-span-2">Duration (min)</div>
-                      <div className="col-span-2">Price</div>
-                      <div className="col-span-1">Qty</div>
-                      <div className="col-span-1 text-right">—</div>
-                    </div>
-
-                    {services.map((s, idx) => (
-                      <div
-                        key={idx}
-                        className="grid grid-cols-12 gap-2 px-4 py-3 border-t"
-                      >
-                       <div className="col-span-4">
-  <select
-    className="w-full border rounded-md px-3 py-2"
-    value={s.serviceName}
-    onChange={(e) =>
-      handleServiceChange(idx, "serviceName", e.target.value)
-    }
-  >
-    <option value="">Select a service</option>
-    {serviceOptions.map((service) => (
-      <option key={service.id} value={service.name}>
-        {service.name}
-      </option>
-    ))}
-  </select>
-</div>
-
-                        <div className="col-span-2">
-                          <select
-                            className="w-full border rounded-md px-3 py-2"
-                            value={s.category}
-                            onChange={(e) =>
-                              handleServiceChange(
-                                idx,
-                                "category",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="">Select</option>
-                            {CATEGORY_OPTIONS.map((c) => (
-                              <option key={c} value={c}>
-                                {c}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="col-span-2">
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-full border rounded-md px-3 py-2"
-                            value={s.duration}
-                            onChange={(e) =>
-                              handleServiceChange(
-                                idx,
-                                "duration",
-                                Number(e.target.value || 0)
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            className="w-full border rounded-md px-3 py-2"
-                            value={s.price}
-                            onChange={(e) =>
-                              handleServiceChange(
-                                idx,
-                                "price",
-                                Number(e.target.value || 0)
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <input
-                            type="number"
-                            min={1}
-                            className="w-full border rounded-md px-3 py-2"
-                            value={s.quantity}
-                            onChange={(e) =>
-                              handleServiceChange(
-                                idx,
-                                "quantity",
-                                Number(e.target.value || 1)
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="col-span-1 flex justify-end items-center">
-                          {services.length > 1 && (
-                            <button
-                              onClick={() => handleRemoveServiceRow(idx)}
-                              className="p-2 rounded hover:bg-red-50 text-red-600"
-                              title="Remove"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    <div className="px-4 py-3 border-t flex justify-between items-center">
-                      <button
-                        onClick={handleAddServiceRow}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add more service
-                      </button>
-
-                      <div className="text-sm text-gray-700">
-                        <span className="mr-4">
-                          <strong>Total Duration:</strong>{" "}
-                          {formTotals.totalDuration} min
-                        </span>
-                        <span>
-                          <strong>Total Price:</strong> $
-                          {formTotals.totalPrice.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Remarks & toggles */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Remarks (optional)
-                      </label>
-                      <textarea
-                        className="mt-1 w-full border rounded-md px-3 py-2 min-h-[80px]"
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                      />
-                    </div>
-                  <div className="space-y-4">
-                      {/* <div className="flex items-center justify-between border rounded-md px-3 py-2">
-                       <span className="text-sm">
-                          Send booking notification by email
-                        </span> 
-                        <input
-                          type="checkbox"
-                          checked={emailConfirmation}
-                          onChange={(e) =>
-                            setEmailConfirmation(e.target.checked)
-                          }
-                        />
-                      </div> */}
-                      {/* <div className="flex items-center justify-between border rounded-md px-3 py-2">
-                        <span className="text-sm">
-                          Send booking notification by SMS
-                        </span> 
-                        <input
-                          type="checkbox"
-                          checked={smsConfirmation}
-                          onChange={(e) => setSmsConfirmation(e.target.checked)}
-                        />
-                      </div> */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Application Status
-                        </label>
-                        <select
-                          className="mt-1 w-full border rounded-md px-3 py-2"
-                          value={status}
-                          onChange={(e) =>
-                            setStatus(e.target.value as BookingStatus)
-                          }
-                        > 
-                          <option value="upcoming">Approved (Upcoming)</option>
-                          <option value="past">Completed (Past)</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 border-t flex justify-end gap-3">
-                  <button
-                    onClick={() => {
-                      setShowCreate(false);
-                      resetForm();
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                    disabled={saving || deleting}
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={saveBooking}
-                    className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-60"
-                    disabled={saving || deleting}
-                  >
-                    {saving
-                      ? editingId
-                        ? "Updating..."
-                        : "Saving..."
-                      : editingId
-                      ? "Update"
-                      : "Save"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* =================== END CREATE / EDIT MODAL =================== */}
-
-        {/* =================== INVOICE MODAL =================== */}
-
-        {/* =================== INVOICE MODAL =================== */}
-        {invoiceData && (
-          <div
-            className={`fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4 transition-opacity ${
-              showInvoice ? "opacity-100 visible" : "opacity-0 invisible"
-            }`}
-          >
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative">
+{/* =================== CREATE / EDIT SCHEDULE MODAL =================== */}
+{showCreate && (
+  <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto h-full w-full">
+    <div className="relative top-10 mx-auto w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3">
+      <div className="bg-white rounded-lg shadow-xl border">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h3 className="text-lg font-semibold">
+            {editingId ? "Edit Schedule" : "Add Schedule"}
+          </h3>
+          <div className="flex items-center gap-2">
+            {editingId && (
               <button
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-                onClick={() => setShowInvoice(false)}
-                title="Close"
+                onClick={deleteBooking}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-60"
+                title="Delete booking"
               >
-                ✖
+                <Trash2 className="w-4 h-4" />
+                Delete
               </button>
-
-              {/* Invoice content */}
-              <div
-                id="invoice-content"
-                className="p-6 bg-white rounded-lg shadow-md"
+            )}
+            {editingId && (
+              <button
+                onClick={() => {
+                  const booking = bookings.find((b) => b.id === editingId);
+                  if (booking) openInvoice(booking);
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                title="Generate Invoice"
               >
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-indigo-700">
-                      Invoice Receipt
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      Booking ID: {invoiceData.id}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">MirrorBeautyLounge</p>
-                    {/*<p className="text-sm text-gray-500">Address line 1</p>
-            <p className="text-sm text-gray-500">Phone: +971-XXX-XXXX</p>*/}
-                  </div>
-                </div>
+                Invoice
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setShowCreate(false);
+                resetForm();
+              }}
+              className="text-gray-400 hover:text-gray-600"
+              title="Close"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
-                  <div>
-                    <p>
-                      <strong>Customer:</strong> {invoiceData.customerName}
-                    </p>
-                    <p>
-                      <strong>Email:</strong>{" "}
-                      {invoiceData.customerEmail ||
-                        users[invoiceData.userId]?.email ||
-                        "N/A"}
-                    </p>
-                    <p>
-                      <strong>Phone:</strong>{" "}
-                      {users[invoiceData.userId]?.phone || "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <p>
-                      <strong>Branch:</strong> {invoiceData.branch}
-                    </p>
-                    <p>
-                      <strong>Date:</strong>{" "}
-                      {format(invoiceData.bookingDate, "dd MMM yyyy")}
-                    </p>
-                    <p>
-                      <strong>Time:</strong>{" "}
-                      {toDisplayAMPM(invoiceData.bookingTime)}
-                    </p>
-                    <p>
-                      <strong>Staff:</strong> {invoiceData.staff || "-"}
-                    </p>
-                  </div>
-                </div>
+        {/* Body */}
+        <div className="p-6 space-y-6">
+          {/* Top selects */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Branch
+              </label>
+              <select
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+              >
+                {BRANCH_OPTIONS.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                <div className="overflow-hidden rounded border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="p-3 text-left">Service</th>
-                        <th className="p-3 text-center">Qty</th>
-                        <th className="p-3 text-right">Price</th>
-                        <th className="p-3 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoiceData.services
-                        .slice(
-                          (currentPage - 1) * staffPerPage,
-                          currentPage * staffPerPage
-                        )
-                        .map((s, i) => (
-                          <tr key={i} className="border-t">
-                            <td className="p-3">{s.serviceName}</td>
-                            <td className="p-3 text-center">{s.quantity}</td>
-                            <td className="p-3 text-right">
-                              AED {Number(s.price).toFixed(2)}
-                            </td>
-                            <td className="p-3 text-right">
-                              AED{" "}
-                              {(Number(s.price) * Number(s.quantity)).toFixed(
-                                2
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Customer Email
+              </label>
+              <input
+                type="email"
+                placeholder="Customer email"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+              />
+            </div>
 
-                <div className="mt-4 flex justify-end items-center gap-6">
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">Subtotal</div>
-                    <div className="text-xl font-bold text-indigo-700">
-                      AED {Number(invoiceData.totalPrice).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
+            {/* Category Select */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Category
+              </label>
+              <select
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                <option value="">Select One</option>
+                {Array.from(new Set(serviceOptions.map((s) => s.category))).map(
+                  (c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
 
-                <div className="mt-6 text-center text-sm text-gray-500">
-                  Thank you for your booking! We look forward to serving you.
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Staff
+              </label>
+              <select
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={staff}
+                onChange={(e) => setStaff(e.target.value)}
+              >
+                <option value="">Select One</option>
+                {STAFF_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Payment Method */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Payment Method
+              </label>
+              <select
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={paymentMethod}
+                onChange={(e) => {
+                  setPaymentMethod(e.target.value);
+                  if (e.target.value !== "custom") {
+                    setCustomPaymentMethod("");
+                  }
+                }}
+              >
+                {PAYMENT_METHODS.map((p) => (
+                  <option key={p} value={p}>
+                    {p.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+
+              {paymentMethod === "custom" && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Custom Payment Method
+                  </label>
+                  <input
+                    type="text"
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    placeholder="Enter custom payment method"
+                    value={customPaymentMethod}
+                    onChange={(e) => setCustomPaymentMethod(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Date & Time */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Service Date
+              </label>
+              <input
+                type="date"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={serviceDate}
+                onChange={(e) => setServiceDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Time Slot
+              </label>
+              <select
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={serviceTime}
+                onChange={(e) => setServiceTime(e.target.value)}
+              >
+                {TIMESLOTS.filter((slot) => {
+                  const hour = slot.split(":")[0];
+                  return !!enabledHours[hour];
+                }).map((slot) => (
+                  <option key={slot} value={slot}>
+                    {toDisplayAMPM(slot)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Customer
+              </label>
+              <input
+                type="text"
+                placeholder="Customer name"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Services table */}
+          <div className="border rounded-lg">
+            <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
+              <div className="col-span-4">Service</div>
+              <div className="col-span-2">Duration (min)</div>
+              <div className="col-span-2">Price</div>
+              <div className="col-span-1">Qty</div>
+              <div className="col-span-1 text-right">—</div>
+            </div>
+
+            {services.map((s, idx) => (
+              <div
+                key={idx}
+                className="grid grid-cols-12 gap-2 px-4 py-3 border-t"
+              >
+                <div className="col-span-4">
+                  <select
+                    className="w-full border rounded-md px-3 py-2"
+                    value={s.serviceName}
+                    onChange={(e) =>
+                      handleServiceChange(idx, "serviceName", e.target.value)
+                    }
+                  >
+                    <option value="">Select a service</option>
+                    {serviceOptions
+                      .filter((service) =>
+                        selectedCategory
+                          ? service.category === selectedCategory
+                          : true
+                      )
+                      .map((service) => (
+                        <option key={service.id} value={service.name}>
+                          {service.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <input
+                    type="number"
+                    min={0}
+                    className="w-full border rounded-md px-3 py-2"
+                    value={s.duration}
+                    onChange={(e) =>
+                      handleServiceChange(
+                        idx,
+                        "duration",
+                        Number(e.target.value || 0)
+                      )
+                    }
+                  />
+                </div>
+                <div className="col-span-2">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-full border rounded-md px-3 py-2"
+                    value={s.price}
+                    onChange={(e) =>
+                      handleServiceChange(
+                        idx,
+                        "price",
+                        Number(e.target.value || 0)
+                      )
+                    }
+                  />
+                </div>
+                <div className="col-span-1">
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-full border rounded-md px-3 py-2"
+                    value={s.quantity}
+                    onChange={(e) =>
+                      handleServiceChange(
+                        idx,
+                        "quantity",
+                        Number(e.target.value || 1)
+                      )
+                    }
+                  />
+                </div>
+                <div className="col-span-1 flex justify-end items-center">
+                  {services.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveServiceRow(idx)}
+                      className="p-2 rounded hover:bg-red-50 text-red-600"
+                      title="Remove"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
+            ))}
 
-              {/* Actions */}
-              <div className="mt-4 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowInvoice(false)}
-                  className="px-4 py-2 bg-gray-100 rounded-md"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={downloadInvoicePDF}
-                  className="px-4 py-2 bg-pink-600 text-white rounded-md"
-                >
-                  Download PDF
-                </button>
+            {/* Tip + Discount + Total */}
+            <div className="px-4 py-3 border-t space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tip Amount (AED)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    placeholder="Enter tip"
+                    value={tip || ""}
+                    onChange={(e) => setTip(Number(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Discount (AED)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    placeholder="Enter discount"
+                    value={discount || ""}
+                    onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <div className="text-sm font-semibold text-gray-800">
+                    Final Total: AED{" "}
+                    {(
+                      formTotals.totalPrice + (tip || 0) - (discount || 0)
+                    ).toFixed(2)}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        )}
-        {/* =================== END INVOICE MODAL =================== */}
 
-        {/* =================== END INVOICE MODAL =================== */}
-        {/* =================== STAFF LIST WITH PAGINATION =================== */}
-
-        {invoiceData && invoiceData.services && (
-          <div className="mt-4 flex justify-between items-center">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-md ${
-                currentPage === 1
-                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-              }`}
-            >
-              Previous
-            </button>
-
-            <span className="text-sm text-gray-700">
-              Page {currentPage} of{" "}
-              {Math.ceil(invoiceData.services.length / staffPerPage)}
-            </span>
-
-            <button
-              onClick={() =>
-                setCurrentPage((prev) =>
-                  Math.min(
-                    prev + 1,
-                    Math.ceil(invoiceData.services.length / staffPerPage)
-                  )
-                )
-              }
-              disabled={
-                currentPage ===
-                Math.ceil(invoiceData.services.length / staffPerPage)
-              }
-              className={`px-4 py-2 rounded-md ${
-                currentPage ===
-                Math.ceil(invoiceData.services.length / staffPerPage)
-                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-              }`}
-            >
-              Next
-            </button>
+          {/* Remarks & toggles */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Remarks (optional)
+              </label>
+              <textarea
+                className="mt-1 w-full border rounded-md px-3 py-2 min-h-[80px]"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+              />
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Application Status
+                </label>
+                <select
+                  className="mt-1 w-full border rounded-md px-3 py-2"
+                  value={status}
+                  onChange={(e) =>
+                    setStatus(e.target.value as BookingStatus)
+                  }
+                >
+                  <option value="upcoming">Approved (Upcoming)</option>
+                  <option value="past">Completed (Past)</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
 
+        {/* Footer */}
+        <div className="px-6 py-4 border-t flex justify-end gap-3">
+          <button
+            onClick={() => {
+              setShowCreate(false);
+              resetForm();
+            }}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            disabled={saving || deleting}
+          >
+            Close
+          </button>
+          <button
+            onClick={saveBooking}
+            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-60"
+            disabled={saving || deleting}
+          >
+            {saving
+              ? editingId
+                ? "Updating..."
+                : "Saving..."
+              : editingId
+              ? "Update"
+              : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+        {/* =================== END CREATE / EDIT MODAL =================== */}
+        {/* =================== INVOICE MODAL =================== */}
+              
+{invoiceData && (
+  <div
+    className={`fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4 transition-opacity ${
+      showInvoice ? "opacity-100 visible" : "opacity-0 invisible"
+    }`}
+  >
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-4 relative max-h-[90vh] overflow-auto">
+      {/* Close Button */}
+      <button
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+        onClick={() => setShowInvoice(false)}
+        title="Close"
+      >
+        ✖
+      </button>
+
+      {/* Dropdown Selection Section */}
+      <div className="p-4 border-b border-gray-200 rounded mb-4">
+        <h3 className="font-semibold text-lg mb-2">Select Branch Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Brand Email Dropdown */}
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Brand Email</label>
+            <select
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={invoiceData.businessEmail}
+              onChange={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessEmail: e.target.value }))
+              }
+            >
+               <option value="select email">select email</option>
+              <option value="branch@mirrosalon.ae">branch@mirrosalon.ae</option>
+              <option value="marina@mirrosalon.ae">marina@mirrosalon.ae</option>
+              <option value="ibnbattuta@mirrosalon.ae">ibnbattuta@mirrosalon.ae</option>
+              <option value="albustan@mirrosalon.ae">albustan@mirrosalon.ae</option>
+              <option value="tecom@mirrosalon.ae">tecom@mirrosalon.ae</option>
+            </select>
+          </div>
+
+          {/* Brand Phone Dropdown */}
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Brand Phone</label>
+            <select
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={invoiceData.businessPhone}
+              onChange={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessPhone: e.target.value }))
+              }
+            >
+              <option value="select number">select number</option>
+              <option value="+971 56 300 5629">Marina Phone: +971 56 300 5629</option>
+              <option value="+971 54 321 0758">IBN Battuta Mall Phone: +971 54 321 0758</option>
+              <option value="+971 50 545 8263">AI Bustaan Phone: +971 50 545 8263</option>
+              <option value="+971 4 568 6219">TECOM Phone: +971 4 568 6219</option>
+              <option value="+971 4 269 1449">AI Muraqqabat Phone: +971 4 269 1449</option>
+            </select>
+          </div>
+
+          {/* Brand Address Dropdown */}
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Brand Address</label>
+            <select
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={invoiceData.businessAddress}
+              onChange={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessAddress: e.target.value }))
+              }
+            >
+
+
+               <option value="select address">
+                select address
+              </option>
+              <option value="Marina Jannah Hotel, Marina - Ground Floor, Shop - 2 Jannah Pl - Dubai Marina - Dubai - United Arab Emirates">
+                Marina Jannah Hotel, Dubai Marina
+              </option>
+              <option value="IBN Battuta Mall, Metro link area - Sheikh Zayed Rd - Dubai - United Arab Emirates">
+                IBN Battuta Mall, Dubai
+              </option>
+              <option value="Al Bustan Centre & Residence Al Nahda Road, Qusais, 20107 - Dubai - United Arab Emirates">
+                AI Bustaan, Dubai
+              </option>
+              <option value="New API Building - Ground Floor - beside Fahad Tower 1 - Barsha Heights - Dubai - United Arab Emirates">
+                TECOM, Dubai
+              </option>
+              <option value="Dominos Pizza Building, Buhaleeba plaza - M02 - Al Muraqqabat - Dubai - United Arab Emirates">
+                AI Muraqqabat, Dubai
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoice Content */}
+      <div id="invoice-content" className="p-4 bg-white rounded-lg shadow-md">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2
+              className="text-2xl font-bold text-indigo-700"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({ ...prev, title: e.target.innerText }))
+              }
+            >
+              {invoiceData.title || "Invoice Receipt"}
+            </h2>
+            <p className="text-sm text-gray-500">
+              Booking ID:{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, id: e.target.innerText }))
+                }
+              >
+                {invoiceData.id}
+              </span>
+            </p>
+          </div>
+
+          <div className="text-right">
+            <p
+              className="font-semibold"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessName: e.target.innerText }))
+              }
+            >
+              {invoiceData.businessName || "MirrorsBeautyLounge"}
+            </p>
+            <p
+              className="text-sm text-gray-500"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessEmail: e.target.innerText }))
+              }
+            >
+              {invoiceData.businessEmail}
+            </p>
+            <p
+              className="text-sm text-gray-500"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessPhone: e.target.innerText }))
+              }
+            >
+              {invoiceData.businessPhone}
+            </p>
+            <p
+              className="text-sm text-gray-500"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({ ...prev, businessAddress: e.target.innerText }))
+              }
+            >
+              {invoiceData.businessAddress}
+            </p>
+          </div>
+        </div>
+
+        {/* Customer Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
+          <div>
+            <p>
+              <strong>Customer:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, customerName: e.target.innerText }))
+                }
+              >
+                {invoiceData.customerName}
+              </span>
+            </p>
+            <p>
+              <strong>Email:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, customerEmail: e.target.innerText }))
+                }
+              >
+                {invoiceData.customerEmail || "N/A"}
+              </span>
+            </p>
+            <p>
+              <strong>Phone:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({
+                    ...prev,
+                    customerPhone: e.target.innerText,
+                  }))
+                }
+              >
+                {users[invoiceData.userId]?.phone || "-"}
+              </span>
+            </p>
+          </div>
+          <div>
+            <p>
+              <strong>Branch:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, branch: e.target.innerText }))
+                }
+              >
+                {invoiceData.branch}
+              </span>
+            </p>
+            <p>
+              <strong>Date:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, bookingDate: e.target.innerText }))
+                }
+              >
+                {format(invoiceData.bookingDate, "dd MMM yyyy")}
+              </span>
+            </p>
+            <p>
+              <strong>Time:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, bookingTime: e.target.innerText }))
+                }
+              >
+                {toDisplayAMPM(invoiceData.bookingTime)}
+              </span>
+            </p>
+            <p>
+              <strong>Staff:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, staff: e.target.innerText }))
+                }
+              >
+                {invoiceData.staff || "-"}
+              </span>
+            </p>
+            <p>
+              <strong>Payment Method:</strong>{" "}
+              <span
+                contentEditable={isEditing}
+                suppressContentEditableWarning={true}
+                onBlur={(e) =>
+                  setInvoiceData((prev) => ({ ...prev, paymentMethod: e.target.innerText }))
+                }
+              >
+                {invoiceData.paymentMethod || "cash"}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Services Table */}
+        <div className="overflow-hidden rounded border">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Service</th>
+                <th className="p-3 text-center">Qty</th>
+                <th className="p-3 text-right">Price</th>
+                <th className="p-3 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoiceData.services.map((s, i) => (
+                <tr key={i} className="border-t">
+                  <td
+                    className="p-3"
+                    contentEditable={isEditing}
+                    suppressContentEditableWarning={true}
+                    onBlur={(e) =>
+                      setInvoiceData((prev) => {
+                        const services = [...prev.services];
+                        services[i].serviceName = e.target.innerText;
+                        return { ...prev, services };
+                      })
+                    }
+                  >
+                    {s.serviceName}
+                  </td>
+                  <td
+                    className="p-3 text-center"
+                    contentEditable={isEditing}
+                    suppressContentEditableWarning={true}
+                    onBlur={(e) =>
+                      setInvoiceData((prev) => {
+                        const services = [...prev.services];
+                        services[i].quantity = Number(e.target.innerText) || 0;
+                        return { ...prev, services };
+                      })
+                    }
+                  >
+                    {s.quantity}
+                  </td>
+                  <td
+                    className="p-3 text-right"
+                    contentEditable={isEditing}
+                    suppressContentEditableWarning={true}
+                    onBlur={(e) =>
+                      setInvoiceData((prev) => {
+                        const services = [...prev.services];
+                        services[i].price = Number(e.target.innerText) || 0;
+                        return { ...prev, services };
+                      })
+                    }
+                  >
+                    AED {Number(s.price).toFixed(2)}
+                  </td>
+                  <td className="p-3 text-right">
+                    AED {(Number(s.price) * Number(s.quantity)).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals */}
+        <div className="mt-6 flex flex-col items-end gap-2 text-sm">
+          <div className="flex justify-between w-64">
+            <span className="text-gray-600">Subtotal:</span>
+            <span
+              className="font-semibold"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({
+                  ...prev,
+                  totalPrice: Number(e.target.innerText.replace(/[^0-9.]/g, "")) || 0,
+                }))
+              }
+            >
+              AED {Number(invoiceData.totalPrice || 0).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between w-64">
+            <span className="text-gray-600">Tip Added:</span>
+            <span
+              className="font-semibold text-green-600"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({
+                  ...prev,
+                  tip: Number(e.target.innerText.replace(/[^0-9.]/g, "")) || 0,
+                }))
+              }
+            >
+              AED {Number(invoiceData.tip || 0).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between w-64">
+            <span className="text-gray-600">Discount Applied:</span>
+            <span
+              className="font-semibold text-red-600"
+              contentEditable={isEditing}
+              suppressContentEditableWarning={true}
+              onBlur={(e) =>
+                setInvoiceData((prev) => ({
+                  ...prev,
+                  discount: Number(e.target.innerText.replace(/[^0-9.]/g, "")) || 0,
+                }))
+              }
+            >
+              AED {Number(invoiceData.discount || 0).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between w-64 border-t pt-2 text-base font-bold">
+            <span>Grand Total (AED):</span>
+            <span>
+              AED{" "}
+              {(
+                Number(invoiceData.totalPrice || 0) +
+                Number(invoiceData.tip || 0) -
+                Number(invoiceData.discount || 0)
+              ).toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="mt-6 text-center text-sm text-gray-500"
+          contentEditable={isEditing}
+          suppressContentEditableWarning={true}
+          onBlur={(e) =>
+            setInvoiceData((prev) => ({ ...prev, footerText: e.target.innerText }))
+          }
+        >
+          {invoiceData.footerText || "Thank you for your booking! We look forward to serving you."}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-4 flex justify-end gap-3">
+        <button
+          onClick={() => setShowInvoice(false)}
+          className="px-4 py-2 bg-gray-100 rounded-md"
+        >
+          Close
+        </button>
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className={`px-4 py-2 rounded-md ${
+            isEditing ? "bg-green-600 text-white" : "bg-blue-600 text-white"
+          }`}
+        >
+          {isEditing ? "Save Invoice" : "Edit Invoice"}
+        </button>
+        <button
+          onClick={downloadInvoicePDF}
+          className="px-4 py-2 bg-pink-600 text-white rounded-md"
+        >
+          Download PDF
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+        {/* =================== END INVOICE MODAL =================== */}
         {/* =================== END STAFF LIST =================== */}
       </div>
     </AccessWrapper>
 
   );
 }
-
-
-
-
-
 
 
 
