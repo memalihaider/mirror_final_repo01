@@ -6,6 +6,7 @@ import SidebarWrapper from './SidebarWrapper';
 import Navbar from './Navbar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
+import GlobalChatNotifier from './GlobalChatNotifier';
 
 export default function ClientLayout({
   children,
@@ -69,6 +70,7 @@ export default function ClientLayout({
         children
       ) : (
         <ProtectedRoute>
+          <GlobalChatNotifier />
           <div className="min-h-screen bg-white">
             {/* Mobile overlay */}
             {isMobile && sidebarOpen && (
@@ -90,9 +92,6 @@ export default function ClientLayout({
             <SidebarWrapper
               collapsed={collapsed}
               setCollapsed={setCollapsed}
-              isMobile={isMobile}
-              isOpen={sidebarOpen}
-              onClose={closeSidebar}
             />
 
             {/* Main content */}

@@ -1,6 +1,4 @@
 
-<<<<<<< HEAD
-=======
 // "use client";
 
 // import { useState, useEffect, useMemo } from "react";
@@ -2329,7 +2327,6 @@
 
 // dropdown payment method
 
->>>>>>> a0811cb (Update 04 repo with new local code)
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -3811,198 +3808,6 @@ const allItems = filteredBookings.filter((b) => {
                 }}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
                 title="Generate Invoice"
-<<<<<<< HEAD
-              >
-                Invoice
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setShowCreate(false);
-                resetForm();
-              }}
-              className="text-gray-400 hover:text-gray-600"
-              title="Close"
-            >
-              <XCircle className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="p-6 space-y-6">
-          {/* Top selects */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Branch
-              </label>
-              <select
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-              >
-                {BRANCH_OPTIONS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Customer Email
-              </label>
-              <input
-                type="email"
-                placeholder="Customer email"
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-              />
-            </div>
-
-            {/* Category Select */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Category
-              </label>
-              <select
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="">Select One</option>
-                {Array.from(new Set(serviceOptions.map((s) => s.category))).map(
-                  (c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Staff
-              </label>
-              <select
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={staff}
-                onChange={(e) => setStaff(e.target.value)}
-              >
-                <option value="">Select One</option>
-                {STAFF_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Payment Method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Payment Method
-              </label>
-              <select
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={paymentMethod}
-                onChange={(e) => {
-                  setPaymentMethod(e.target.value);
-                  if (e.target.value !== "custom") {
-                    setCustomPaymentMethod("");
-                  }
-                }}
-              >
-                {PAYMENT_METHODS.map((p) => (
-                  <option key={p} value={p}>
-                    {p.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-
-              {paymentMethod === "custom" && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Custom Payment Method
-                  </label>
-                  <input
-                    type="text"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    placeholder="Enter custom payment method"
-                    value={customPaymentMethod}
-                    onChange={(e) => setCustomPaymentMethod(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Date & Time */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Service Date
-              </label>
-              <input
-                type="date"
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={serviceDate}
-                onChange={(e) => setServiceDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Time Slot
-              </label>
-              <select
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={serviceTime}
-                onChange={(e) => setServiceTime(e.target.value)}
-              >
-                {TIMESLOTS.filter((slot) => {
-                  const hour = slot.split(":")[0];
-                  return !!enabledHours[hour];
-                }).map((slot) => (
-                  <option key={slot} value={slot}>
-                    {toDisplayAMPM(slot)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Customer
-              </label>
-              <input
-                type="text"
-                placeholder="Customer name"
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Services table */}
-          <div className="border rounded-lg">
-            <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
-              <div className="col-span-4">Service</div>
-              <div className="col-span-2">Duration (min)</div>
-              <div className="col-span-2">Price</div>
-              <div className="col-span-1">Qty</div>
-              <div className="col-span-1 text-right">—</div>
-            </div>
-
-            {services.map((s, idx) => (
-              <div
-                key={idx}
-                className="grid grid-cols-12 gap-2 px-4 py-3 border-t"
-              >
-=======
               >
                 Invoice
               </button>
@@ -4213,7 +4018,6 @@ const allItems = filteredBookings.filter((b) => {
                 key={idx}
                 className="grid grid-cols-12 gap-2 px-4 py-3 border-t"
               >
->>>>>>> a0811cb (Update 04 repo with new local code)
                 <div className="col-span-4">
                   <select
                     className="w-full border rounded-md px-3 py-2"
@@ -4314,22 +4118,6 @@ const allItems = filteredBookings.filter((b) => {
                   />
                 </div>
 
-<<<<<<< HEAD
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Discount (AED)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    placeholder="Enter discount"
-                    value={discount || ""}
-                    onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                  />
-                </div>
-=======
                <div>
   <label className="block text-sm font-medium text-gray-700">
     Discount (%)
@@ -4345,7 +4133,6 @@ const allItems = filteredBookings.filter((b) => {
     onChange={(e) => setDiscount(Number(e.target.value) || 0)}
   />
 </div>
->>>>>>> a0811cb (Update 04 repo with new local code)
 
                 <div className="flex flex-col justify-end">
                   <div className="text-sm font-semibold text-gray-800">

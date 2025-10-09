@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 // 'use client';
 
 // import { useState, useEffect } from 'react';
@@ -424,7 +422,6 @@
 
 
 // category filter
->>>>>>> a0811cb (Update 04 repo with new local code)
 'use client';
 
 import { useState, useEffect } from 'react';
