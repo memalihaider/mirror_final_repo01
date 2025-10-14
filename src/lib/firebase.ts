@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp } from "firebase/app";
-import { getAnalytics, Analytics } from "firebase/analytics";
+import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getAuth, Auth } from "firebase/auth";
@@ -59,9 +59,21 @@ function initializeFirebase() {
       
 
       
-      // Initialize Analytics with error handling
+      // Initialize Analytics only if supported
       try {
-        analytics = getAnalytics(app);
+        isSupported()
+          .then((supported) => {
+            if (supported) {
+              analytics = getAnalytics(app);
+            } else {
+              console.warn('Firebase Analytics not supported in this environment. Skipping initialization.');
+              analytics = null;
+            }
+          })
+          .catch((error) => {
+            console.warn('Firebase Analytics support check failed:', error);
+            analytics = null;
+          });
       } catch (error) {
         console.warn('Firebase Analytics initialization failed:', error);
         analytics = null;

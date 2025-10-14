@@ -334,17 +334,17 @@
 }
 
 /* Content with margins and border radius - Responsive */
-.content-container {
+/* .content-container {
   margin: 0.5rem;
   border-radius: 1rem;
   background: white;
   box-shadow: 0 4px 6px -1px #ff8f8f;
   min-height: calc(100vh - 120px);
-}
+} */
 
-@media (min-width: 640px) {
+@media (min-width: 840px) {
   .content-container {
-    margin: 1rem;
+    margin: 20px;
   }
 }
 
