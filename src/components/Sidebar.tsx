@@ -20,25 +20,17 @@ import {
   Receipt,
   Menu,
   X,
-  Sparkles,
 } from 'lucide-react';
 
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Pacifico } from 'next/font/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useState, useEffect, useRef } from 'react';
-
-const pacifico = Pacifico({
-  subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-pacifico',
-});
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Navigation items
 const navItems: {
@@ -50,7 +42,7 @@ const navItems: {
 }[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/", roles: ["admin", "user"] },
 
-  // ✅ Invoice Management Added
+  // ✅ Invoice Management
   {
     icon: Receipt,
     label: "Invoice Management",
@@ -64,7 +56,7 @@ const navItems: {
   // Product Management
   {
     icon: FolderOpen,
-    label: "Product Management",
+    label: "Products",
     href: "/products",
     roles: ["admin", "user"],
     subItems: [
@@ -74,26 +66,21 @@ const navItems: {
     ],
   },
 
-  { icon: Calendar, label: "Appointment Management", href: "/bookings", roles: ["admin"], subItems: [] },
+  { icon: Calendar, label: "Appointments", href: "/bookings", roles: ["admin"], subItems: [] },
   { icon: ShoppingCart, label: "E-commerce", href: "/ecommerce", roles: ["admin", "user"], subItems: [] },
-  { icon: TrendingUp, label: "Sales Analytics", href: "/sales", roles: ["admin", "user"], subItems: [] },
-  { icon: MessageCircle, label: "Customer Support", href: "/chat", roles: ["admin"], subItems: [] },
-  { icon: Building2, label: "Branch Management", href: "/branches", roles: ["admin", "user"], subItems: [] },
-  { icon: CreditCard, label: "Membership Plans", href: "/membership", roles: ["admin", "user"], subItems: [] },
-  { icon: FileText, label: "Membership & LoyaltyPoints Reports", href: "/membershipReport", roles: ["admin", "user"], subItems: [] },
-  { icon: FileText, label: "Feedback Report", href: "/feedback", roles: ["admin", "user"], subItems: [] },
-
-  // Staff Management
-  { icon: UserCheck, label: "Staff Management", href: "/staff", roles: ["admin", "user"], subItems: [] },
-  { icon: UserCheck, label: "Booking Approval Page", href: "/bookingstatus", roles: ["admin", "user"], subItems: [] },
-  { icon: ClipboardList, label: "Daily Tasks", href: "/staffDailyTasks", roles: ["admin", "user"], subItems: [] },
-  { icon: BarChart3, label: "Business Reports", href: "/reports", roles: ["admin", "user"], subItems: [] },
-  
-  // Customer Management
-  { icon: UserCircle, label: "Customer Management", href: "/customers", roles: ["admin", "user"], subItems: [] },
-
-  { icon: Users, label: "User Administration", href: "/users", roles: ["admin"], subItems: [] },
-  { icon: Settings, label: "Profile Settings", href: "/profile", roles: ["admin", "user"], subItems: [] },
+  { icon: TrendingUp, label: "Analytics", href: "/sales", roles: ["admin", "user"], subItems: [] },
+  { icon: MessageCircle, label: "Support", href: "/chat", roles: ["admin"], subItems: [] },
+  { icon: Building2, label: "Branches", href: "/branches", roles: ["admin", "user"], subItems: [] },
+  { icon: CreditCard, label: "Membership", href: "/membership", roles: ["admin", "user"], subItems: [] },
+  { icon: FileText, label: "Reports", href: "/membershipReport", roles: ["admin", "user"], subItems: [] },
+  { icon: FileText, label: "Feedback", href: "/feedback", roles: ["admin", "user"], subItems: [] },
+  { icon: UserCheck, label: "Staff", href: "/staff", roles: ["admin", "user"], subItems: [] },
+  { icon: UserCheck, label: "Booking Approval", href: "/bookingstatus", roles: ["admin", "user"], subItems: [] },
+  { icon: ClipboardList, label: "Tasks", href: "/staffDailyTasks", roles: ["admin", "user"], subItems: [] },
+  { icon: BarChart3, label: "Business", href: "/reports", roles: ["admin", "user"], subItems: [] },
+  { icon: UserCircle, label: "Customers", href: "/customers", roles: ["admin", "user"], subItems: [] },
+  { icon: Users, label: "Users", href: "/users", roles: ["admin"], subItems: [] },
+  { icon: Settings, label: "Settings", href: "/profile", roles: ["admin", "user"], subItems: [] },
 ];
 
 interface SidebarProps {
@@ -110,18 +97,26 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Check if mobile
+  // ✅ Optimized mobile detection with debounce
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 100);
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
-  // ✅ Sync theme from localStorage
+  // ✅ Optimized theme detection
   useEffect(() => {
     const isDark = localStorage.getItem("theme") === "dark";
     setDarkMode(isDark);
@@ -138,7 +133,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     return () => observer.disconnect();
   }, []);
 
-  // ✅ Close sidebar when clicking outside on mobile
+  // ✅ Optimized click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile && 
@@ -160,37 +155,38 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     }
   }, [pathname, isMobile]);
 
-  // ✅ Ab hooks ke baad conditional return
-  if (pathname === "/signin") {
-    return null;
-  }
-
-  const isMenuItemActive = (href: string) => {
+  // ✅ Memoized navigation handlers
+  const isMenuItemActive = useCallback((href: string) => {
     if (href === '/dashboard') {
       return pathname === '/' || pathname === '/dashboard';
     }
     return pathname.startsWith(href);
-  };
+  }, [pathname]);
 
-  const toggleSubmenu = (href: string) => {
+  const toggleSubmenu = useCallback((href: string) => {
     setOpenMenus((prev) =>
       prev.includes(href) ? prev.filter((h) => h !== href) : [...prev, href]
     );
-  };
+  }, []);
 
-  const handleNavigation = (href: string) => {
+  const handleNavigation = useCallback((href: string) => {
     router.push(href);
     if (isMobile) {
       setMobileOpen(false);
     }
-  };
+  }, [router, isMobile]);
 
-  const handleToggle = () => {
+  const handleToggle = useCallback(() => {
     onToggle();
     if (isMobile) {
       setMobileOpen(!mobileOpen);
     }
-  };
+  }, [onToggle, isMobile, mobileOpen]);
+
+  // ✅ Skip rendering on signin page
+  if (pathname === "/signin") {
+    return null;
+  }
 
   // Mobile overlay and sidebar
   if (isMobile) {
@@ -203,13 +199,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             "fixed top-4 left-4 z-50 p-2 rounded-xl",
             "bg-gradient-to-br from-pink-500 to-pink-600",
             "text-white shadow-lg shadow-pink-500/25",
-            "transition-all duration-300 hover:scale-110",
+            "transition-all duration-200 hover:scale-105 active:scale-95",
             "md:hidden"
           )}
+          aria-label="Toggle menu"
         >
           <motion.div
             animate={{ rotate: mobileOpen ? 90 : 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </motion.div>
@@ -222,7 +219,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
               onClick={() => setMobileOpen(false)}
             />
           )}
@@ -236,13 +234,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={cn(
-                'fixed left-0 top-0 h-full z-50 flex flex-col w-80',
-                'bg-gradient-to-b from-white via-white to-pink-50/30',
-                'dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/50',
-                'border-r border-pink-100/50 dark:border-slate-700/50',
-                'shadow-2xl shadow-pink-100/30 dark:shadow-slate-900/50',
+                'fixed left-0 top-0 h-full z-50 flex flex-col w-64',
+                'bg-white/95 backdrop-blur-lg dark:bg-slate-900/95',
+                'border-r border-gray-200/50 dark:border-slate-700/50',
+                'shadow-xl shadow-gray-200/20 dark:shadow-slate-900/50',
                 'md:hidden'
               )}
             >
@@ -269,16 +266,17 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <button
         onClick={onToggle}
         className={cn(
-          "fixed top-6 z-40 p-2 rounded-xl transition-all duration-300 hover:scale-110",
+          "fixed top-4 z-40 p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95",
           "bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-lg",
           "border border-pink-400/20 backdrop-blur-sm",
           collapsed ? "left-4" : "left-64",
           "hidden md:flex items-center justify-center"
         )}
+        aria-label="Toggle sidebar"
       >
         <motion.div
           animate={{ rotate: collapsed ? 0 : 180 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
         >
           <ChevronRight className="w-4 h-4" />
         </motion.div>
@@ -289,15 +287,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ref={sidebarRef}
         initial={false}
         animate={{
-          width: collapsed ? '80px' : '280px',
+          width: collapsed ? '72px' : '240px',
         }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        transition={{ duration: 0.2, ease: 'easeInOut' }}
         className={cn(
           'fixed left-0 top-0 h-full z-30 flex flex-col',
-          'bg-gradient-to-b from-white via-white to-pink-50/30',
-          'dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/50',
-          'border-r border-pink-100/50 dark:border-slate-700/50',
-          'shadow-xl shadow-pink-100/20 dark:shadow-slate-900/50',
+          'bg-white/95 backdrop-blur-lg dark:bg-slate-900/95',
+          'border-r border-gray-200/50 dark:border-slate-700/50',
+          'shadow-xl shadow-gray-200/20 dark:shadow-slate-900/50',
           'hidden md:flex'
         )}
       >
@@ -316,7 +313,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 }
 
 // Mobile Sidebar Content Component
-function MobileSidebarContent({
+const MobileSidebarContent = React.memo(({
   pathname,
   darkMode,
   openMenus,
@@ -324,38 +321,29 @@ function MobileSidebarContent({
   handleNavigation,
   isMenuItemActive,
   onClose
-}: any) {
+}: any) => {
   return (
     <>
-      {/* Header */}
-      <div className="flex items-center justify-between h-20 px-6 border-b border-pink-100/50 dark:border-slate-700/50">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200/50 dark:border-slate-700/50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg relative">
-            <span className={cn('text-white font-bold text-lg')}>
-              <img src="https://mirrorsbeautylounge.ae/uploadfiles/Qp9iKFntNXTpnPoWG4v0YZVEmk7j8nqJsNIhmhBc.png?v=1.0.2" />
-            </span>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center shadow-md">
+            <span className="text-white font-bold text-sm">M</span>
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-pink-600 dark:text-pink-400">
-              Mirrors Beauty Lounge
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              Premium Salon Experience
-            </p>
-          </div>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Mirrors
+          </h1>
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-lg hover:bg-pink-100/50 dark:hover:bg-slate-700/50 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
         >
-          <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+          <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
         </button>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
+      <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
         {navItems.map(({ icon: Icon, label, href, subItems = [] }) => {
           const isActive = isMenuItemActive(href);
           const hasSubItems = subItems.length > 0;
@@ -364,8 +352,8 @@ function MobileSidebarContent({
           return (
             <div key={href}>
               <motion.div
-                whileTap={{ scale: 0.98 }}
-                transition={{ duration: 0.15 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.1 }}
                 onClick={() => {
                   if (hasSubItems) {
                     toggleSubmenu(href);
@@ -374,37 +362,24 @@ function MobileSidebarContent({
                   }
                 }}
                 className={cn(
-                  'flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-200 group relative',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 group',
                   isActive
-                    ? darkMode
-                      ? 'bg-gradient-to-r from-[#E60076]/20 to-[#E60076]/10 text-[#E60076] shadow-lg shadow-[#E60076]/10'
-                      : 'bg-gradient-to-r from-[#E60076]/15 to-[#E60076]/5 text-[#E60076] shadow-lg shadow-[#E60076]/10'
-                    : darkMode
-                      ? 'text-slate-400 hover:text-white hover:bg-gradient-to-r hover:from-[#E60076]/10 hover:to-[#E60076]/5'
-                      : 'text-slate-600 hover:text-slate-800 hover:bg-gradient-to-r hover:from-[#E60076]/8 hover:to-[#E60076]/3'
+                    ? 'bg-pink-500 text-white shadow-md shadow-pink-500/25'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
                 )}
               >
-                <div className="relative">
-                  <Icon className={cn('w-6 h-6 flex-shrink-0', isActive && 'drop-shadow-sm')} />
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeIndicator"
-                      className="absolute inset-0 bg-[#E60076]/20 rounded-lg"
-                      transition={{ type: "spring", duration: 0.6 }}
-                    />
-                  )}
-                </div>
+                <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-white')} />
                 
-                <span className="font-semibold text-base flex-1">
+                <span className="font-medium text-sm flex-1">
                   {label}
                 </span>
 
                 {hasSubItems && (
                   <motion.div
                     animate={{ rotate: isOpen ? 90 : 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4" />
                   </motion.div>
                 )}
               </motion.div>
@@ -416,38 +391,29 @@ function MobileSidebarContent({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.15 }}
                     className="overflow-hidden"
                   >
-                    <motion.ul
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-8 mt-2 space-y-2 overflow-hidden"
-                    >
+                    <div className="ml-6 mt-1 space-y-1 border-l border-gray-200 dark:border-slate-700 pl-3">
                       {subItems.map((sub, i) => (
-                        <motion.li
+                        <motion.div
                           key={i}
-                          whileHover={{ x: 4 }}
-                          transition={{ duration: 0.15 }}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.1, delay: i * 0.05 }}
                           onClick={() => handleNavigation(sub.href)}
                           className={cn(
-                            'px-4 py-3 text-sm rounded-xl cursor-pointer transition-all duration-200 border-2 flex items-center gap-3',
+                            'px-3 py-2 text-sm rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-2',
                             pathname === sub.href
-                              ? darkMode
-                                ? 'bg-[#E60076]/20 text-[#E60076] border-[#E60076]/30'
-                                : 'bg-[#E60076]/10 text-[#E60076] border-[#E60076]/30'
-                              : darkMode
-                                ? 'text-slate-400 hover:text-white hover:bg-[#E60076]/10 border-transparent hover:border-[#E60076]/20'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-[#E60076]/5 border-transparent hover:border-[#E60076]/20'
+                              ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20'
+                              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800/50'
                           )}
                         >
-                          <div className="w-2 h-2 rounded-full bg-current opacity-60" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
                           <span className="font-medium">{sub.label}</span>
-                        </motion.li>
+                        </motion.div>
                       ))}
-                    </motion.ul>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -457,10 +423,10 @@ function MobileSidebarContent({
       </div>
     </>
   );
-}
+});
 
 // Desktop Sidebar Content Component
-function DesktopSidebarContent({
+const DesktopSidebarContent = React.memo(({
   collapsed,
   pathname,
   darkMode,
@@ -468,38 +434,32 @@ function DesktopSidebarContent({
   toggleSubmenu,
   handleNavigation,
   isMenuItemActive
-}: any) {
+}: any) => {
   return (
     <>
-      {/* Header */}
-      <div className="flex items-center justify-center h-20 px-4 border-b border-pink-100/50 dark:border-slate-700/50">
+      {/* Compact Header */}
+      <div className="flex items-center justify-center h-16 px-3 border-b border-gray-200/50 dark:border-slate-700/50">
         <motion.div
           animate={{ opacity: collapsed ? 0 : 1, scale: collapsed ? 0.8 : 1 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.15 }}
           className={cn(
-            'flex items-center gap-3',
+            'flex items-center gap-2',
             collapsed && 'pointer-events-none'
           )}
         >
-          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg relative">
-            <span className={cn('text-white font-bold text-lg', pacifico.className)}>
-              M
-            </span>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center shadow-md">
+            <span className="text-white font-bold text-sm">M</span>
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-pink-600 dark:text-pink-400 leading-tight">
+          {!collapsed && (
+            <h1 className="text-base font-semibold text-gray-900 dark:text-white whitespace-nowrap">
               Mirrors Beauty
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Lounge & Salon
-            </p>
-          </div>
+          )}
         </motion.div>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-6 px-3 space-y-2">
+      <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
         {navItems.map(({ icon: Icon, label, href, subItems = [] }) => {
           const isActive = isMenuItemActive(href);
           const hasSubItems = subItems.length > 0;
@@ -510,9 +470,9 @@ function DesktopSidebarContent({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <motion.div
-                    whileHover={{ x: collapsed ? 0 : 4 }}
+                    whileHover={{ x: collapsed ? 0 : 2 }}
                     whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.15 }}
+                    transition={{ duration: 0.1 }}
                     onClick={() => {
                       if (hasSubItems) {
                         toggleSubmenu(href);
@@ -521,32 +481,19 @@ function DesktopSidebarContent({
                       }
                     }}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 group relative',
+                      'flex items-center gap-3 px-2 py-2.5 rounded-xl cursor-pointer transition-all duration-150 group',
                       isActive
-                        ? darkMode
-                          ? 'bg-gradient-to-r from-[#E60076]/20 to-[#E60076]/10 text-[#E60076] shadow-lg shadow-[#E60076]/10'
-                          : 'bg-gradient-to-r from-[#E60076]/15 to-[#E60076]/5 text-[#E60076] shadow-lg shadow-[#E60076]/10'
-                        : darkMode
-                          ? 'text-slate-400 hover:text-white hover:bg-gradient-to-r hover:from-[#E60076]/10 hover:to-[#E60076]/5'
-                          : 'text-slate-600 hover:text-slate-800 hover:bg-gradient-to-r hover:from-[#E60076]/8 hover:to-[#E60076]/3'
+                        ? 'bg-pink-500 text-white shadow-md shadow-pink-500/25'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800'
                     )}
                   >
-                    <div className="relative">
-                      <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'drop-shadow-sm')} />
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeIndicator"
-                          className="absolute inset-0 bg-[#E60076]/20 rounded-lg"
-                          transition={{ type: "spring", duration: 0.6 }}
-                        />
-                      )}
-                    </div>
+                    <Icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-white')} />
                     
                     <motion.span
                       animate={{ opacity: collapsed ? 0 : 1 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.15 }}
                       className={cn(
-                        'font-semibold text-sm flex-1',
+                        'font-medium text-sm flex-1 whitespace-nowrap',
                         collapsed && 'pointer-events-none'
                       )}
                     >
@@ -556,9 +503,9 @@ function DesktopSidebarContent({
                     {hasSubItems && !collapsed && (
                       <motion.div
                         animate={{ rotate: isOpen ? 90 : 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: 0.15 }}
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </motion.div>
                     )}
                   </motion.div>
@@ -566,7 +513,7 @@ function DesktopSidebarContent({
                 <TooltipContent 
                   side="right" 
                   className={cn(
-                    'bg-slate-900 text-white border-0 px-3 py-2 text-sm',
+                    'bg-gray-900 text-white border-0 px-2 py-1 text-xs',
                     collapsed ? '' : 'hidden'
                   )}
                 >
@@ -581,38 +528,29 @@ function DesktopSidebarContent({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.15 }}
                     className="overflow-hidden"
                   >
-                    <motion.ul
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-8 mt-2 space-y-1 overflow-hidden"
-                    >
+                    <div className="ml-6 mt-1 space-y-1 border-l border-gray-200 dark:border-slate-700 pl-3">
                       {subItems.map((sub, i) => (
-                        <motion.li
+                        <motion.div
                           key={i}
-                          whileHover={{ x: 4 }}
-                          transition={{ duration: 0.15 }}
+                          initial={{ opacity: 0, x: -4 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.1, delay: i * 0.03 }}
                           onClick={() => handleNavigation(sub.href)}
                           className={cn(
-                            'px-3 py-2 text-xs rounded-xl cursor-pointer transition-all duration-200 border flex items-center gap-2',
+                            'px-2 py-1.5 text-xs rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-2',
                             pathname === sub.href
-                              ? darkMode
-                                ? 'bg-[#E60076]/20 text-[#E60076] border-[#E60076]/30'
-                                : 'bg-[#E60076]/10 text-[#E60076] border-[#E60076]/30'
-                              : darkMode
-                                ? 'text-slate-400 hover:text-white hover:bg-[#E60076]/10 border-transparent hover:border-[#E60076]/20'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-[#E60076]/5 border-transparent hover:border-[#E60076]/20'
+                              ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400'
+                              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800/50'
                           )}
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                          <span className="font-medium">{sub.label}</span>
-                        </motion.li>
+                          <span className="font-medium whitespace-nowrap">{sub.label}</span>
+                        </motion.div>
                       ))}
-                    </motion.ul>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -622,4 +560,7 @@ function DesktopSidebarContent({
       </div>
     </>
   );
-}
+});
+
+// Add React.memo import at the top
+import React from 'react';

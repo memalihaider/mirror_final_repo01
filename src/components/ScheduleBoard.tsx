@@ -15,6 +15,8 @@ interface ScheduleBoardProps {
   onCellClick: (staff: string, time: string) => void;
   onEditBooking: (booking: Booking) => void;
   onGenerateInvoice: (booking: Booking) => void;
+  filters?: any;
+  searchTerm?: string;
 }
 
 // Helper functions first
@@ -210,8 +212,8 @@ const BookingCard = memo(({ booking, onEdit, onGenerateInvoice, isAdmin, showTim
 BookingCard.displayName = 'BookingCard';
 
 // Memoized Staff Header component with enhanced styling
-const StaffHeader = memo(({ staffName }: { staffName: string }) => (
-  <div className="sticky top-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300 px-4 py-3 font-extrabold text-gray-800 text-sm truncate tracking-wide overflow-hidden text-ellipsis">
+const StaffHeader = memo(({ staffName, isVisible }: { staffName: string; isVisible: boolean }) => (
+  <div className={`sticky top-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300 px-4 py-3 font-extrabold text-gray-800 text-sm truncate tracking-wide overflow-hidden text-ellipsis ${isVisible ? '' : 'hidden'}`}>
     {staffName}
   </div>
 ));
@@ -219,8 +221,8 @@ const StaffHeader = memo(({ staffName }: { staffName: string }) => (
 StaffHeader.displayName = 'StaffHeader';
 
 // Memoized Time Slot component with fixed height and enhanced styling
-const TimeSlot = memo(({ time }: { time: string }) => (
-  <div className="sticky left-0 z-10 bg-gray-100 border-r-2 border-gray-300 px-4 py-4 font-bold text-gray-800 h-[60px] flex items-center tracking-wide truncate overflow-hidden text-ellipsis">
+const TimeSlot = memo(({ time, isVisible }: { time: string; isVisible: boolean }) => (
+  <div className={`sticky left-0 z-10 bg-gray-100 border-r-2 border-gray-300 px-4 py-4 font-bold text-gray-800 h-[60px] flex items-center tracking-wide truncate overflow-hidden text-ellipsis ${isVisible ? '' : 'hidden'}`}>
     {toDisplayAMPM(time)}
   </div>
 ));
@@ -235,7 +237,9 @@ export function ScheduleBoard({
   enabledHours,
   onCellClick,
   onEditBooking,
-  onGenerateInvoice
+  onGenerateInvoice,
+  filters = {},
+  searchTerm = ""
 }: ScheduleBoardProps) {
   const { isAdmin } = useAuth();
 
@@ -244,13 +248,7 @@ export function ScheduleBoard({
     return [...new Set(staffOptions)];
   }, [staffOptions]);
 
-  // Show ALL bookings from Firebase - no filtering by date/branch for now
-  const displayBookings = useMemo(() => {
-    console.log('All bookings from Firebase:', bookings);
-    return bookings;
-  }, [bookings]);
-
-  // Memoized enabled time slots
+  // Memoized enabled time slots - MOVED TO TOP
   const enabledTimeSlots = useMemo(() => {
     return TIMESLOTS.filter(t => {
       const hour = t.split(":")[0].padStart(2, "0");
@@ -258,12 +256,7 @@ export function ScheduleBoard({
     });
   }, [enabledHours]);
 
-  // Memoized cell click handler
-  const handleCellClick = useCallback((staff: string, time: string) => {
-    onCellClick(staff, time);
-  }, [onCellClick]);
-
-  // Get all time slots that a booking spans
+  // Get all time slots that a booking spans - MOVED BEFORE filteredBookings
   const getBookingTimeSlots = useCallback((booking: Booking) => {
     const position = calculateBookingPosition(booking.bookingTime, booking.totalDuration || 30);
     const timeSlots = [];
@@ -278,27 +271,115 @@ export function ScheduleBoard({
     return timeSlots;
   }, []);
 
+  // Filter bookings based on search term and filters
+  const filteredBookings = useMemo(() => {
+    if (!bookings.length) return [];
+
+    const searchTermLower = searchTerm.toLowerCase();
+    const hasSearchTerm = searchTerm.length > 0;
+    const filtersBranch = filters.branch;
+    const filtersStaff = filters.staff;
+    const filtersDate = filters.date;
+    const filtersCustomer = filters.customer?.toLowerCase() || "";
+    const filtersTime = filters.time;
+
+    return bookings.filter((booking) => {
+      // Search term filtering
+      if (hasSearchTerm) {
+        const matchesSearch = 
+          booking.customerName.toLowerCase().includes(searchTermLower) ||
+          booking.branch.toLowerCase().includes(searchTermLower) ||
+          booking.services.some((s) => s.serviceName.toLowerCase().includes(searchTermLower)) ||
+          (booking.staff && booking.staff.toLowerCase().includes(searchTermLower));
+        if (!matchesSearch) return false;
+      }
+
+      // Individual filters
+      if (filtersBranch && booking.branch !== filtersBranch) return false;
+      if (filtersStaff && booking.staff !== filtersStaff) return false;
+      if (filtersDate && format(booking.bookingDate, "yyyy-MM-dd") !== filtersDate) return false;
+      if (filtersCustomer && !booking.customerName.toLowerCase().includes(filtersCustomer)) return false;
+      if (filtersTime && booking.bookingTime !== filtersTime) return false;
+
+      return true;
+    });
+  }, [bookings, searchTerm, filters]);
+
+  // Get staff members that have bookings in the filtered results
+  const visibleStaffMembers = useMemo(() => {
+    const staffWithBookings = new Set<string>();
+    
+    filteredBookings.forEach(booking => {
+      if (booking.staff && uniqueStaffOptions.includes(booking.staff)) {
+        staffWithBookings.add(booking.staff);
+      }
+    });
+
+    // If staff filter is applied, only show that staff member
+    if (filters.staff) {
+      return uniqueStaffOptions.filter(staff => staff === filters.staff);
+    }
+
+    // If no filters, show all staff
+    if (!searchTerm && !filters.branch && !filters.date && !filters.customer && !filters.time) {
+      return uniqueStaffOptions;
+    }
+
+    // Otherwise show only staff with matching bookings
+    return Array.from(staffWithBookings);
+  }, [filteredBookings, uniqueStaffOptions, filters, searchTerm]);
+
+  // Get time slots that have bookings in the filtered results
+  const visibleTimeSlots = useMemo(() => {
+    const timesWithBookings = new Set<string>();
+    
+    filteredBookings.forEach(booking => {
+      const timeSlots = getBookingTimeSlots(booking);
+      timeSlots.forEach(timeSlot => {
+        timesWithBookings.add(timeSlot);
+      });
+    });
+
+    // If time filter is applied, only show that time slot
+    if (filters.time) {
+      return enabledTimeSlots.filter(time => time === filters.time);
+    }
+
+    // If no filters, show all enabled time slots
+    if (!searchTerm && !filters.branch && !filters.staff && !filters.date && !filters.customer) {
+      return enabledTimeSlots;
+    }
+
+    // Otherwise show only time slots with matching bookings
+    return enabledTimeSlots.filter(time => timesWithBookings.has(time));
+  }, [filteredBookings, enabledTimeSlots, filters, searchTerm, getBookingTimeSlots]);
+
+  // Memoized cell click handler
+  const handleCellClick = useCallback((staff: string, time: string) => {
+    onCellClick(staff, time);
+  }, [onCellClick]);
+
   // Create a map of which bookings should be displayed in which cells
   const bookingCellMap = useMemo(() => {
     const map: Record<string, Record<string, Booking[]>> = {};
     
-    // Initialize the map structure
-    enabledTimeSlots.forEach(time => {
+    // Initialize the map structure only for visible time slots and staff
+    visibleTimeSlots.forEach(time => {
       map[time] = {};
-      uniqueStaffOptions.forEach(staff => {
+      visibleStaffMembers.forEach(staff => {
         map[time][staff] = [];
       });
     });
 
     // Place each booking in all the time slots it spans
-    displayBookings.forEach(booking => {
+    filteredBookings.forEach(booking => {
       const timeSlots = getBookingTimeSlots(booking);
-      const staff = booking.staff && uniqueStaffOptions.includes(booking.staff) 
+      const staff = booking.staff && visibleStaffMembers.includes(booking.staff) 
         ? booking.staff 
         : "Unassigned";
 
       timeSlots.forEach(timeSlot => {
-        if (map[timeSlot] && map[timeSlot][staff]) {
+        if (map[timeSlot] && map[timeSlot][staff] && visibleTimeSlots.includes(timeSlot)) {
           // Only add if not already present (avoid duplicates)
           if (!map[timeSlot][staff].some(b => b.id === booking.id)) {
             map[timeSlot][staff].push(booking);
@@ -308,7 +389,7 @@ export function ScheduleBoard({
     });
 
     return map;
-  }, [displayBookings, enabledTimeSlots, uniqueStaffOptions, getBookingTimeSlots]);
+  }, [filteredBookings, visibleTimeSlots, visibleStaffMembers, getBookingTimeSlots]);
 
   // Check if a booking should be the primary display in a slot (first slot)
   const isPrimarySlot = useCallback((booking: Booking, time: string) => {
@@ -334,6 +415,11 @@ export function ScheduleBoard({
     return cellBookings.filter(booking => isPrimarySlot(booking, time)).length > 0;
   }, [bookingCellMap, isPrimarySlot]);
 
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return searchTerm || filters.branch || filters.staff || filters.date || filters.customer || filters.time;
+  }, [searchTerm, filters]);
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-slate-50 border-2 border-gray-300 shadow-2xl backdrop-blur-sm mb-0">
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
@@ -347,45 +433,48 @@ export function ScheduleBoard({
           <h3 className="text-xl font-extrabold text-gray-800 tracking-wide">Schedule Board</h3>
           <div className="flex-1 h-px bg-gradient-to-r from-indigo-200 via-purple-200 to-transparent"></div>
           <div className="text-sm font-semibold text-gray-600">
-            {displayBookings.length} bookings • {enabledTimeSlots.length} time slots
+            {filteredBookings.length} bookings • {visibleTimeSlots.length} time slots • {visibleStaffMembers.length} staff
+            {hasActiveFilters && (
+              <span className="ml-2 text-blue-600 animate-pulse">• Filtered</span>
+            )}
           </div>
         </div>
       </div>
 
       <div className="relative overflow-x-auto w-full">
-        {/* Staff Header Row with enhanced borders */}
+        {/* Staff Header Row with enhanced borders - Only show visible staff */}
         <div 
           className="grid sticky top-0 z-30 bg-white border-b-2 border-gray-300"
           style={{
-            gridTemplateColumns: `180px repeat(${uniqueStaffOptions.length}, 200px)`,
+            gridTemplateColumns: `180px repeat(${visibleStaffMembers.length}, 200px)`,
           }}
         >
           <div className="sticky left-0 z-40 bg-white border-r-2 border-gray-300 px-4 py-3 font-extrabold text-gray-800 h-[60px] flex items-center tracking-wide">
             Time
           </div>
-          {uniqueStaffOptions.map((staffName) => (
-            <StaffHeader key={`staff-header-${staffName}`} staffName={staffName} />
+          {visibleStaffMembers.map((staffName) => (
+            <StaffHeader key={`staff-header-${staffName}`} staffName={staffName} isVisible={true} />
           ))}
         </div>
 
-        {/* Time Slots Rows - FIXED HEIGHT with enhanced borders */}
-        {enabledTimeSlots.length === 0 ? (
+        {/* Time Slots Rows - Only show visible time slots */}
+        {visibleTimeSlots.length === 0 ? (
           <div className="text-center py-12 text-gray-500 font-semibold">
-            No time slots enabled. Please enable hours in the schedule controls.
+            {hasActiveFilters ? "No bookings match your filters" : "No time slots enabled. Please enable hours in the schedule controls."}
           </div>
         ) : (
-          enabledTimeSlots.map((t) => (
+          visibleTimeSlots.map((t) => (
             <div
               key={`timeslot-${t}`}
               className="grid border-b border-gray-200"
               style={{
-                gridTemplateColumns: `180px repeat(${uniqueStaffOptions.length}, 200px)`,
+                gridTemplateColumns: `180px repeat(${visibleStaffMembers.length}, 200px)`,
                 height: '60px'
               }}
             >
-              <TimeSlot time={t} />
+              <TimeSlot time={t} isVisible={true} />
 
-              {uniqueStaffOptions.map((sName) => {
+              {visibleStaffMembers.map((sName) => {
                 const cellBookings = bookingCellMap[t]?.[sName] || [];
                 const primaryBookings = cellBookings.filter(booking => 
                   isPrimarySlot(booking, t)
@@ -434,9 +523,6 @@ export function ScheduleBoard({
                           </button>
                         </div>
                       )}
-
-                      {/* REMOVED "Occupied" text to clean up design */}
-                      {/* Secondary slots will now appear as empty but won't show the "+" button */}
                     </div>
                   </div>
                 );
