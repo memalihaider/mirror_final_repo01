@@ -23,6 +23,21 @@ const BRANCH_OPTIONS = [
   "IBN Batutta Mall",
 ];
 
+// Memoize helper functions outside component
+const generateTimeSlots = (start = 0, end = 12 * 120, step = 15) => {
+  const slots: string[] = [];
+  for (let t = start; t <= end; t += step) {
+    const h = Math.floor(t / 60).toString().padStart(2, "0");
+    const m = (t % 60).toString().padStart(2, "0");
+    slots.push(`${h}:${m}`);
+  }
+  return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+const UNIQUE_HOURS = Array.from(new Set(TIME_SLOTS.map((t) => t.split(":")[0]))).sort((a, b) => Number(a) - Number(b));
+const INITIAL_ENABLED_HOURS = Object.fromEntries(UNIQUE_HOURS.map(h => [h, true]));
+
 export default function BookingsPage() {
   // Hooks for data management
   const { bookings, loading, saveBooking, deleteBooking } = useBookings();
@@ -46,49 +61,67 @@ export default function BookingsPage() {
   const [invoiceData, setInvoiceData] = useState<Booking | null>(null);
   const [bookingFormData, setBookingFormData] = useState<BookingFormData | null>(null);
   
-  // Schedule board states
-  const [scheduleDate, setScheduleDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  // Schedule board states - use initial state function to avoid recalculations
+  const [scheduleDate, setScheduleDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [scheduleBranch, setScheduleBranch] = useState<string>("all");
   
-  // Hours management
-  const uniqueHours = useMemo(() => 
-    Array.from(new Set(generateTimeSlots().map((t) => t.split(":")[0]))).sort((a, b) => Number(a) - Number(b)), 
-    []
-  );
-  
-  const [enabledHours, setEnabledHours] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(uniqueHours.map(h => [h, true]))
-  );
+  // Hours management - memoized initial state
+  const [enabledHours, setEnabledHours] = useState<Record<string, boolean>>(INITIAL_ENABLED_HOURS);
 
-  // Filtered bookings
+  // Optimized filtered bookings with early returns and variable caching
   const filteredBookings = useMemo(() => {
+    if (!bookings.length) return [];
+    
+    const searchTermLower = searchTerm.toLowerCase();
+    const hasSearchTerm = searchTerm.length > 0;
+    const filtersBranch = filters.branch;
+    const filtersStaff = filters.staff;
+    const filtersDate = filters.date;
+    const filtersCustomer = filters.customer.toLowerCase();
+    const filtersTime = filters.time;
+    const isStatusAll = statusFilter === "all";
+
     return bookings.filter((booking) => {
-      const q = searchTerm.toLowerCase();
-      const matchesSearch =
-        booking.customerName.toLowerCase().includes(q) ||
-        booking.branch.toLowerCase().includes(q) ||
-        booking.services.some((s) => s.serviceName.toLowerCase().includes(q));
+      // Early return for status filter (most selective first)
+      if (!isStatusAll && booking.status !== statusFilter) return false;
+      
+      // Search term filtering with early return
+      if (hasSearchTerm) {
+        const matchesSearch = 
+          booking.customerName.toLowerCase().includes(searchTermLower) ||
+          booking.branch.toLowerCase().includes(searchTermLower) ||
+          booking.services.some((s) => s.serviceName.toLowerCase().includes(searchTermLower));
+        if (!matchesSearch) return false;
+      }
 
-      const matchesStatus =
-        statusFilter === "all" || booking.status === (statusFilter as "upcoming" | "past" | "cancelled");
+      // Individual filters with early returns in order of selectivity
+      if (filtersBranch && booking.branch !== filtersBranch) return false;
+      if (filtersStaff && booking.staff !== filtersStaff) return false;
+      if (filtersDate && format(booking.bookingDate, "yyyy-MM-dd") !== filtersDate) return false;
+      if (filtersCustomer && !booking.customerName.toLowerCase().includes(filtersCustomer)) return false;
+      if (filtersTime && booking.bookingTime !== filtersTime) return false;
 
-      const matchesBranch = !filters.branch || booking.branch === filters.branch;
-      const matchesStaff = !filters.staff || (booking.staff ? booking.staff === filters.staff : false);
-      const matchesDate = !filters.date || format(booking.bookingDate, "yyyy-MM-dd") === filters.date;
-      const matchesCustomer = !filters.customer || booking.customerName.toLowerCase().includes(filters.customer.toLowerCase());
-      const matchesTime = !filters.time || booking.bookingTime === filters.time;
-
-      return matchesSearch && matchesStatus && matchesBranch && matchesStaff && matchesDate && matchesCustomer && matchesTime;
+      return true;
     });
   }, [bookings, searchTerm, statusFilter, filters]);
 
-  // Unique times for filter dropdown
+  // Memoized unique times with Set optimization
   const uniqueTimes = useMemo(() => {
-    const times = bookings.map((b) => b.bookingTime).filter(Boolean);
-    return Array.from(new Set(times)).sort();
+    const timeSet = new Set<string>();
+    for (let i = 0; i < bookings.length; i++) {
+      const time = bookings[i].bookingTime;
+      if (time) timeSet.add(time);
+    }
+    return Array.from(timeSet).sort();
   }, [bookings]);
 
-  // Modal handlers
+  // Memoized branches data
+  const memoizedBranches = useMemo(() => 
+    branches.length ? branches : BRANCH_OPTIONS,
+    [branches]
+  );
+
+  // Stable callback handlers with proper dependencies
   const handleOpenCreate = useCallback(() => {
     setEditingId(null);
     setBookingFormData(null);
@@ -171,22 +204,35 @@ export default function BookingsPage() {
   }, []);
 
   const handleSaveBooking = useCallback(async (formData: BookingFormData, editingId?: string) => {
+    // Pre-calculate totals to avoid multiple reducers
+    let totalPrice = 0;
+    let totalDuration = 0;
+    const processedServices = formData.services.map((s) => {
+      const price = Number(s.price) || 0;
+      const duration = Number(s.duration) || 0;
+      const quantity = Number(s.quantity) || 0;
+      totalPrice += price * quantity;
+      totalDuration += duration * quantity;
+      
+      return {
+        ...s,
+        price,
+        duration,
+        quantity,
+      };
+    });
+
     const bookingPayload = {
       userId: uuidv4(),
       customerName: formData.customerName.trim(),
-      services: formData.services.map((s) => ({
-        ...s,
-        price: Number(s.price) || 0,
-        duration: Number(s.duration) || 0,
-        quantity: Number(s.quantity) || 0,
-      })),
+      services: processedServices,
       bookingDate: new Date(formData.serviceDate + "T00:00:00"),
       bookingTime: formData.serviceTime,
       branch: formData.branch,
       customerEmail: formData.customerEmail.trim(),
       staff: formData.staff || null,
-      totalPrice: formData.services.reduce((sum, s) => sum + (Number(s.price) || 0) * (Number(s.quantity) || 0), 0),
-      totalDuration: formData.services.reduce((sum, s) => sum + (Number(s.duration) || 0) * (Number(s.quantity) || 0), 0),
+      totalPrice,
+      totalDuration,
       status: formData.status,
       paymentMethod: formData.paymentMethod === "custom" ? formData.customPaymentMethod : formData.paymentMethod,
       emailConfirmation: formData.emailConfirmation,
@@ -203,13 +249,17 @@ export default function BookingsPage() {
     await deleteBooking(bookingId);
   }, [deleteBooking]);
 
+  // Memoized modal handlers to prevent unnecessary re-renders
+  const handleCloseCreateModal = useCallback(() => setShowCreateModal(false), []);
+  const handleCloseInvoiceModal = useCallback(() => setShowInvoiceModal(false), []);
+
   // Loading state
   if (loading || resourcesLoading) {
     return (
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+      <div className="p-6 w-full">
+        <div className="w-full">
+          <div className="flex items-center justify-center py-12 w-full">
+            <div className="rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
             <span className="ml-3 text-pink-600">Loading bookings...</span>
           </div>
         </div>
@@ -220,11 +270,11 @@ export default function BookingsPage() {
   return (
     <AccessWrapper>
       <ClientOnly>
-        <div className="max-w-6xl mx-auto dark:text-white">
+        <div className="w-full px-4 sm:px-6 lg:px-8 dark:text-white">
           {/* <BookingsHeader onAddBooking={handleOpenCreate} /> */}
           
           <BookingsFilterBar
-            branches={branches.length ? branches : BRANCH_OPTIONS}
+            branches={memoizedBranches}
             staff={staff}
             uniqueTimes={uniqueTimes}
             onFiltersChange={setFilters}
@@ -248,8 +298,8 @@ export default function BookingsPage() {
           />
 
           {filteredBookings.length === 0 && (
-            <div className="text-center py-12">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="text-center py-12 w-full">
+              <div className="mx-auto h-12 w-12 text-gray-400">📅</div>
               <h3 className="mt-2 text-sm font-medium text-gray-900">
                 No bookings found
               </h3>
@@ -272,31 +322,17 @@ export default function BookingsPage() {
             enabledHours={enabledHours}
             onSave={handleSaveBooking}
             onDelete={handleDeleteBooking}
-            onClose={() => setShowCreateModal(false)}
+            onClose={handleCloseCreateModal}
             onGenerateInvoice={handleOpenInvoice}
           />
 
           <InvoiceModal
             isOpen={showInvoiceModal}
             invoiceData={invoiceData}
-            onClose={() => setShowInvoiceModal(false)}
+            onClose={handleCloseInvoiceModal}
           />
         </div>
       </ClientOnly>
     </AccessWrapper>
   );
 }
-
-// Helper functions
-function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
-  const slots: string[] = [];
-  for (let t = start; t <= end; t += step) {
-    const h = Math.floor(t / 60).toString().padStart(2, "0");
-    const m = (t % 60).toString().padStart(2, "0");
-    slots.push(`${h}:${m}`);
-  }
-  return slots;
-}
-
-// Import Calendar component
-import { Calendar } from "lucide-react";

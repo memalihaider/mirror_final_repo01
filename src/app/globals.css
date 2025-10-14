@@ -342,9 +342,9 @@
   min-height: calc(100vh - 120px);
 } */
 
-@media (min-width: 840px) {
+@media (min-width: 940px) {
   .content-container {
-    margin: 20px;
+    margin: 10px;
   }
 }
 

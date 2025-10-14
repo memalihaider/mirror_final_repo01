@@ -165,12 +165,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Clean Header - Removed gradient overlay issues */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
+    <div className="min-h-screen bg-white w-full">
+      {/* Clean Header - Full width */}
+      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white w-full">
+        <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 tracking-tight">
                 {getCurrentGreeting()}! 👋
               </h1>
@@ -181,24 +181,24 @@ export default function Dashboard() {
                 Manage your beauty services, track performance, and grow your business
               </p>
             </div>
-            <div className="hidden md:block">
+            <div className="hidden md:block flex-shrink-0 ml-6">
               <div className="text-4xl lg:text-6xl opacity-20">💄</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Stats Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Main Content - Full width responsive */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 w-full max-w-full">
+        {/* Stats Section - Responsive grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 w-full">
           {(loading ? Array.from({ length: 4 }) : stats).map((stat, index) => (
             <div
               key={index}
-              className="group relative overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100"
+              className="group relative overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 w-full"
             >
               {loading ? (
-                <div className="p-4 sm:p-6 animate-pulse space-y-4">
+                <div className="p-4 sm:p-6 animate-pulse space-y-4 w-full">
                   <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                   <div className="h-8 bg-gray-300 rounded w-1/2"></div>
                   <div className="h-3 bg-gray-200 rounded w-3/4"></div>
@@ -210,24 +210,24 @@ export default function Dashboard() {
                     {stat.bgIcon}
                   </div>
                   
-                  <div className="relative p-4 sm:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center text-white text-lg sm:text-xl shadow-sm`}>
+                  <div className="relative p-4 sm:p-6 w-full">
+                    <div className="flex items-center justify-between mb-4 w-full">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center text-white text-lg sm:text-xl shadow-sm flex-shrink-0`}>
                         {stat.icon}
                       </div>
-                      <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${stat.color} text-white text-xs font-semibold opacity-90`}>
+                      <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${stat.color} text-white text-xs font-semibold opacity-90 flex-shrink-0`}>
                         Live
                       </div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                    <div className="space-y-2 w-full">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide truncate">
                         {stat.name}
                       </p>
                       <p className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
                         {stat.value}
                       </p>
-                      <p className="text-xs sm:text-sm text-gray-500 font-medium">
+                      <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">
                         {stat.change}
                       </p>
                     </div>
@@ -238,40 +238,40 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <div className="flex items-center mb-4 sm:mb-6">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm sm:text-base mr-2 sm:mr-3">
+        {/* Quick Actions - Full width */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 w-full">
+          <div className="flex items-center mb-4 sm:mb-6 w-full">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm sm:text-base mr-2 sm:mr-3 flex-shrink-0">
               ⚡
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Quick Actions</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Quick Actions</h2>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 w-full">
             {quickActions.map((action, i) => (
               <Link
                 key={i}
                 href={action.href}
-                className="group relative overflow-hidden rounded-lg sm:rounded-xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-300"
+                className="group relative overflow-hidden rounded-lg sm:rounded-xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-300 w-full"
               >
                 <div className={`absolute inset-0 bg-gradient-to-r ${action.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
                 
-                <div className="relative">
-                  <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center text-white text-base sm:text-xl mb-3 sm:mb-4 shadow-sm group-hover:scale-105 transition-transform duration-300`}>
+                <div className="relative w-full">
+                  <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center text-white text-base sm:text-xl mb-3 sm:mb-4 shadow-sm group-hover:scale-105 transition-transform duration-300 flex-shrink-0`}>
                     {action.icon}
                   </div>
                   
-                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1 sm:mb-2">
+                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1 sm:mb-2 truncate">
                     {action.name}
                   </h3>
                   
-                  <p className="text-xs sm:text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
                     {action.description}
                   </p>
                   
                   <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm font-semibold text-gray-400 group-hover:text-gray-600">
                     Get started
-                    <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -281,30 +281,30 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div className="flex items-center">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm sm:text-base mr-2 sm:mr-3">
+        {/* Recent Activity - Full width */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 w-full">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 w-full">
+            <div className="flex items-center min-w-0">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm sm:text-base mr-2 sm:mr-3 flex-shrink-0">
                 📈
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Activity</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Recent Activity</h2>
             </div>
-            <div className="text-xs sm:text-sm text-gray-500 font-medium">
+            <div className="text-xs sm:text-sm text-gray-500 font-medium flex-shrink-0 ml-4">
               Last 24 hours
             </div>
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             {loading ? (
               Array.from({ length: 3 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="animate-pulse rounded-lg p-3 sm:p-4 bg-gray-50"
+                  className="animate-pulse rounded-lg p-3 sm:p-4 bg-gray-50 w-full"
                 >
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-lg"></div>
-                    <div className="flex-1 space-y-2">
+                  <div className="flex items-center space-x-3 sm:space-x-4 w-full">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                    <div className="flex-1 space-y-2 min-w-0">
                       <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4"></div>
                       <div className="h-2 sm:h-3 bg-gray-200 rounded w-1/2"></div>
                     </div>
@@ -315,15 +315,15 @@ export default function Dashboard() {
               recentActivity.map((activity, idx) => (
                 <div
                   key={idx}
-                  className="group rounded-lg sm:rounded-xl p-3 sm:p-4 bg-gray-50 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-300"
+                  className="group rounded-lg sm:rounded-xl p-3 sm:p-4 bg-gray-50 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-300 w-full"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3 sm:space-x-4">
-                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${activity.color} flex items-center justify-center text-base sm:text-lg font-semibold`}>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${activity.color} flex items-center justify-center text-base sm:text-lg font-semibold flex-shrink-0`}>
                         {activity.icon}
                       </div>
-                      <div>
-                        <div className="font-semibold text-gray-900 text-sm sm:text-base">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">
                           {activity.action}: <span className="text-gray-700">{activity.item}</span>
                         </div>
                         <div className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -331,7 +331,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0 ml-4">
                       <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
@@ -340,7 +340,7 @@ export default function Dashboard() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 sm:py-12">
+              <div className="text-center py-8 sm:py-12 w-full">
                 <div className="text-4xl sm:text-6xl mb-3 sm:mb-4 opacity-20">📊</div>
                 <p className="text-gray-500 font-medium text-sm sm:text-base">No recent activity</p>
                 <p className="text-xs sm:text-sm text-gray-400 mt-1">Activity will appear here as you use the system</p>

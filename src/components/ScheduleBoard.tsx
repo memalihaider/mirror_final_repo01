@@ -1,346 +1,10 @@
-// import { useState, useMemo } from 'react';
-// import { Calendar, Clock, User, CreditCard } from "lucide-react";
-// import { format, isSameDay } from 'date-fns';
-// import { Booking } from '@/types/booking';
-
-// interface ScheduleBoardProps {
-//   bookings: Booking[];
-//   staffOptions: string[];
-//   scheduleDate: string;
-//   scheduleBranch: string;
-//   enabledHours: Record<string, boolean>;
-//   onCellClick: (staff: string, time: string) => void;
-//   onEditBooking: (booking: Booking) => void;
-//   onGenerateInvoice: (booking: Booking) => void;
-// }
-
-// const TIMESLOTS = generateTimeSlots();
-
-// function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
-//   const slots: string[] = [];
-//   for (let t = start; t <= end; t += step) {
-//     const h = Math.floor(t / 60).toString().padStart(2, "0");
-//     const m = (t % 60).toString().padStart(2, "0");
-//     slots.push(`${h}:${m}`);
-//   }
-//   return slots;
-// }
-
-// function toDisplayAMPM(hhmm: string) {
-//   const [hStr, m] = hhmm.split(":");
-//   let h = Number(hStr);
-//   const suffix = h >= 12 ? "PM" : "AM";
-//   if (h === 0) h = 12;
-//   if (h > 12) h = h - 12;
-//   return `${h}:${m} ${suffix}`;
-// }
-
-// function getStatusBlock(status: string) {
-//   switch (status) {
-//     case "upcoming":
-//       return "bg-blue-500 font-bold text-white";
-//     case "past":
-//       return "bg-green-500 font-bold text-white";
-//     case "cancelled":''
-//       return "bg-red-500 font-bold text-white";
-//     default:
-//       return "bg-blue-500 text-white font-bold";
-//   }
-// }
-
-// export function ScheduleBoard({ 
-//   bookings, 
-//   staffOptions, 
-//   scheduleDate, 
-//   scheduleBranch, 
-//   enabledHours, 
-//   onCellClick, 
-//   onEditBooking, 
-//   onGenerateInvoice 
-// }: ScheduleBoardProps) {
-  
-//   // Remove duplicate staff names and ensure uniqueness
-//   const uniqueStaffOptions = useMemo(() => {
-//     const seen = new Set();
-//     return staffOptions.filter(staff => {
-//       if (seen.has(staff)) {
-//         console.warn(`Duplicate staff name found: ${staff}`);
-//         return false;
-//       }
-//       seen.add(staff);
-//       return true;
-//     });
-//   }, [staffOptions]);
-
-//   const scheduleMatrix = useMemo(() => {
-//     const map: Record<string, Record<string, Booking[]>> = {};
-
-//     // Initialize empty slots
-//     TIMESLOTS.forEach((t) => {
-//       map[t] = {};
-//       uniqueStaffOptions.forEach((s) => (map[t][s] = []));
-//       map[t]["Unassigned"] = [];
-//     });
-
-//     bookings.forEach((b) => {
-//       const matchDate = format(b.bookingDate, "yyyy-MM-dd") === scheduleDate;
-//       const matchBranch = scheduleBranch === "all" || b.branch === scheduleBranch;
-//       const hour = b.bookingTime?.split(":")[0] ?? "";
-//       const hourEnabled = !!enabledHours[hour];
-
-//       if (!matchDate || !matchBranch || !hourEnabled) return;
-
-//       const t = b.bookingTime;
-//       const sName = b.staff && uniqueStaffOptions.includes(b.staff) ? b.staff : "Unassigned";
-
-//       if (!map[t]) map[t] = {};
-//       if (!map[t][sName]) map[t][sName] = [];
-
-//       map[t][sName].push(b);
-//     });
-
-//     return map;
-//   }, [bookings, scheduleDate, scheduleBranch, uniqueStaffOptions, enabledHours]);
-
-//   const formatDate = (dateStr: string | Date) => {
-//     const d = new Date(dateStr);
-//     return `${d.getFullYear()}-${(d.getMonth() + 1)
-//       .toString()
-//       .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-//   };
-
-//   const normalizeTime = (timeStr: string) => {
-//     if (!timeStr) return "";
-//     let [hh, mm] = timeStr.split(":");
-//     if (!mm) mm = "00";
-//     const lowerTime = timeStr.toLowerCase();
-//     const isPM = lowerTime.includes("pm");
-//     const isAM = lowerTime.includes("am");
-//     hh = hh.replace(/\D/g, "");
-//     let hourNum = parseInt(hh, 10);
-//     if (isPM && hourNum !== 12) hourNum += 12;
-//     if (isAM && hourNum === 12) hourNum = 0;
-//     return `${hourNum.toString().padStart(2, "0")}:${mm.substring(0, 2)}`;
-//   };
-
-//   return (
-//     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-gray-100 border border-white/20 shadow-2xl backdrop-blur-sm mb-10 animate-fade-in">
-//       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
-
-//       {/* Header */}
-//       <div className="relative p-6 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white">
-//         <div className="flex items-center gap-3">
-//           <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg animate-float">
-//             <Calendar className="w-5 h-5 text-white" />
-//           </div>
-//           <h3 className="text-xl font-bold text-gray-800">Schedule Board</h3>
-//           <div className="flex-1 h-px bg-gradient-to-r from-indigo-200 via-purple-200 to-transparent"></div>
-//         </div>
-//         <div className="absolute top-2 right-2 w-12 h-12 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full animate-bounce-subtle"></div>
-//       </div>
-
-//       <div className="relative overflow-x-auto w-full">
-//         <div className="w-full relative">
-//           <div
-//             className="grid sticky top-0 z-20"
-//             style={{
-//               gridTemplateColumns: `180px repeat(${uniqueStaffOptions.length}, 200px)`,
-//             }}
-//           >
-//             <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white border-b border-gray-600 px-4 py-4 font-bold sticky left-0 z-30 shadow-lg">
-//               <div className="flex items-center gap-2">
-//                 <Clock className="w-4 h-4" />
-//                 Time
-//               </div>
-//             </div>
-//             {uniqueStaffOptions.map((sName, index) => (
-//               <div
-//                 key={`staff-${sName}-${index}`}
-//                 className={`bg-gradient-to-r ${index % 2 === 0
-//                   ? 'from-blue-500 to-indigo-600'
-//                   : 'from-purple-500 to-pink-600'
-//                   } text-white border-b border-white/20 px-4 py-4 font-bold text-center shadow-lg animate-fade-in-delay`}
-//                 style={{ animationDelay: `${index * 100}ms` }}
-//               >
-//                 <div className="flex items-center justify-center gap-2">
-//                   <User className="w-4 h-4" />
-//                   {sName}
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-
-//         <div>
-//           {TIMESLOTS.map((t) => {
-//             const hour = t.split(":")[0].padStart(2, "0");
-//             const hourEnabled = !!enabledHours[hour];
-//             if (!hourEnabled) return null;
-
-//             return (
-//               <div
-//                 key={`timeslot-${t}`}
-//                 className="grid"
-//                 style={{
-//                   gridTemplateColumns: `180px repeat(${uniqueStaffOptions.length}, 200px)`,
-//                 }}
-//               >
-//                 <div className="sticky left-0 z-10 bg-gray-50 border-t border-b px-4 py-3 font-medium">
-//                   {toDisplayAMPM(t)}
-//                 </div>
-
-//                 {uniqueStaffOptions.map((sName) => {
-//                   const today = new Date();
-//                   const yesterday = new Date();
-//                   yesterday.setDate(today.getDate() - 1);
-//                   const allowedDates = [formatDate(yesterday), formatDate(today)];
-
-//                   const allItems = bookings.filter((b) => {
-//                     const bookingDay = formatDate(b.bookingDate);
-//                     const normalizedBookingTime = normalizeTime(b.bookingTime);
-
-//                     const [startHour, startMin] = normalizedBookingTime.split(":").map(Number);
-//                     const bookingStart = startHour * 60 + startMin;
-//                     const bookingEnd = bookingStart + (b.totalDuration || 30);
-
-//                     const normalizedSlotTime = normalizeTime(t);
-//                     const [slotHour, slotMin] = normalizedSlotTime.split(":").map(Number);
-//                     const slotMinutes = slotHour * 60 + slotMin;
-
-//                     const staffMatch = b.staff ? b.staff === sName : true;
-
-//                     return (
-//                       staffMatch &&
-//                       allowedDates.includes(bookingDay) &&
-//                       slotMinutes >= bookingStart &&
-//                       slotMinutes < bookingEnd
-//                     );
-//                   });
-
-//                   return (
-//                     <div
-//                       key={`cell-${t}-${sName}`}
-//                       className={` min-h-[64px] ${!hourEnabled
-//                         ? "bg-gray-50 opacity-70 pointer-events-none"
-//                         : ""
-//                         }`}
-//                       onClick={(e) => {
-//                         if (!hourEnabled) return;
-//                         if (allItems.length === 0) {
-//                           onCellClick(sName, t);
-//                         }
-//                       }}
-//                     >
-//                       <div className="space-y-2">
-//                         {allItems.map((b) => (
-//                           <BookingCard
-//                             key={`booking-${b.id}-${t}-${sName}`}
-//                             booking={b}
-//                             onEdit={onEditBooking}
-//                             onGenerateInvoice={onGenerateInvoice}
-//                           />
-//                         ))}
-
-//                         {allItems.length === 0 && hourEnabled && (
-//                           <div className="w-full h-full flex items-center justify-center">
-//                             <button
-//                               className="text-[11px] text-emerald-700 hover:text-emerald-900"
-//                               onClick={() => onCellClick(sName, t)}
-//                             >
-//                               +
-//                             </button>
-//                           </div>
-//                         )}
-
-//                         {allItems.length === 0 && !hourEnabled && (
-//                           <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-//                             Disabled
-//                           </div>
-//                         )}
-//                       </div>
-//                     </div>
-//                   );
-//                 })}
-//               </div>
-//             );
-//           })}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// function BookingCard({ booking, onEdit, onGenerateInvoice }: any) {
-//   const handleInvoiceClick = (e: React.MouseEvent) => {
-//     e.stopPropagation();
-//     onGenerateInvoice(booking);
-//   };
-
-//   const handleCardClick = (e: React.MouseEvent) => {
-//     // Only trigger edit if the click wasn't on the invoice button
-//     if (!(e.target as HTMLElement).closest('.invoice-button')) {
-//       onEdit(booking);
-//     }
-//   };
-
-//   return (
-//     <div
-//       onClick={handleCardClick}
-//       className={`w-full text-left text-xs rounded-md border px-2 py-2 hover:shadow transition cursor-pointer ${getStatusBlock(
-//         booking.status
-//       )}`}
-//       title={`${booking.customerName} @ ${booking.bookingTime}`}
-//     >
-//       <div className="flex justify-between items-start">
-//         <div className="font-semibold truncate">
-//           {booking.customerName}
-//         </div>
-
-//         <div className="flex items-center gap-2">
-//           {booking.status === "past" && (
-//           <button 
-//             onClick={handleInvoiceClick}
-//             className="invoice-button text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
-//             title="Generate Invoice"
-//           >
-//             Invoice
-//           </button>
-//            )}
-
-
-
-
-//           <span className="text-[11px] opacity-80">
-//             {toDisplayAMPM(booking.bookingTime)}
-//           </span>
-//         </div>
-//       </div>
-//       <div className="truncate text-[12px]">
-//         {booking.services.map((s: any) => s.serviceName).join(", ")}
-//       </div>
-//       <div className="flex items-center text-[11px] opacity-80 mt-1">
-//         <Clock className="w-3 h-3 mr-1" />
-//         {toDisplayAMPM(booking.bookingTime)} • {booking.totalDuration}m
-//       </div>
-//       <div className="flex items-center text-[11px] opacity-80 mt-1">
-//         <CreditCard className="w-3 h-3 mr-1" />
-//         {booking.paymentMethod || "cash"}
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
-// new user
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Calendar, Clock, User, CreditCard } from "lucide-react";
+import { useMemo, useCallback, memo } from 'react';
+import { Calendar, Clock, CreditCard, User, Plus } from "lucide-react";
 import { format } from 'date-fns';
 import { Booking } from '@/types/booking';
-import { useAuth } from '@/contexts/AuthContext'; // ✅ Import your Auth Context
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ScheduleBoardProps {
   bookings: Booking[];
@@ -353,8 +17,7 @@ interface ScheduleBoardProps {
   onGenerateInvoice: (booking: Booking) => void;
 }
 
-const TIMESLOTS = generateTimeSlots();
-
+// Helper functions first
 function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
   const slots: string[] = [];
   for (let t = start; t <= end; t += step) {
@@ -365,27 +28,204 @@ function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
   return slots;
 }
 
-function toDisplayAMPM(hhmm: string) {
+const TIMESLOTS = generateTimeSlots();
+
+const toDisplayAMPM = (hhmm: string) => {
   const [hStr, m] = hhmm.split(":");
   let h = Number(hStr);
   const suffix = h >= 12 ? "PM" : "AM";
   if (h === 0) h = 12;
   if (h > 12) h = h - 12;
   return `${h}:${m} ${suffix}`;
-}
+};
 
-function getStatusBlock(status: string) {
+// Calculate end time based on start time and duration
+const calculateEndTime = (startTime: string, duration: number) => {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + duration;
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+};
+
+// Enhanced status blocks with better colors and styling
+const getStatusBlock = (status: string) => {
   switch (status) {
     case "upcoming":
-      return "bg-blue-500 font-bold text-white";
+      return {
+        background: "bg-gradient-to-r from-blue-500 to-blue-600",
+        border: "border-2 border-blue-400 shadow-md",
+        text: "text-white",
+        header: "bg-blue-600/20"
+      };
     case "past":
-      return "bg-green-500 font-bold text-white";
+      return {
+        background: "bg-gradient-to-r from-green-500 to-green-600",
+        border: "border-2 border-green-400 shadow-md",
+        text: "text-white",
+        header: "bg-green-600/20"
+      };
     case "cancelled":
-      return "bg-red-500 font-bold text-white";
+      return {
+        background: "bg-gradient-to-r from-red-500 to-red-600",
+        border: "border-2 border-red-400 shadow-md",
+        text: "text-white",
+        header: "bg-red-600/20"
+      };
     default:
-      return "bg-blue-500 text-white font-bold";
+      return {
+        background: "bg-gradient-to-r from-blue-500 to-blue-600",
+        border: "border-2 border-blue-400 shadow-md",
+        text: "text-white",
+        header: "bg-blue-600/20"
+      };
   }
-}
+};
+
+// Calculate time slot position and duration
+const calculateBookingPosition = (bookingTime: string, duration: number) => {
+  const [hours, minutes] = bookingTime.split(':').map(Number);
+  const startMinutes = hours * 60 + minutes;
+  const durationInSlots = Math.max(1, Math.ceil(duration / 15)); // Each slot is 15 minutes
+  const startSlotIndex = TIMESLOTS.findIndex(slot => {
+    const [slotHours, slotMinutes] = slot.split(':').map(Number);
+    return slotHours === hours && slotMinutes === minutes;
+  });
+  
+  return {
+    startSlotIndex,
+    durationInSlots,
+    startMinutes,
+    endMinutes: startMinutes + duration,
+    endTime: calculateEndTime(bookingTime, duration)
+  };
+};
+
+// Memoized BookingCard component with responsive text containment
+const BookingCard = memo(({ booking, onEdit, onGenerateInvoice, isAdmin, showTime = true, slotDuration = 1 }: any) => {
+  const handleInvoiceClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onGenerateInvoice(booking);
+  }, [booking, onGenerateInvoice]);
+
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
+    if (!(e.target as HTMLElement).closest('.invoice-button')) {
+      onEdit(booking);
+    }
+  }, [booking, onEdit]);
+
+  const serviceNames = useMemo(() => 
+    booking.services.map((s: any) => s.serviceName).join(", "),
+    [booking.services]
+  );
+
+  const statusStyle = getStatusBlock(booking.status);
+  const position = calculateBookingPosition(booking.bookingTime, booking.totalDuration || 30);
+  
+  // Fixed height calculation - each slot is exactly 60px
+  const cardHeight = slotDuration * 60 - 8; // 8px for margin/padding
+
+  return (
+    <div
+      onClick={handleCardClick}
+      className={`w-full rounded-lg ${statusStyle.background} ${statusStyle.border} ${statusStyle.text} shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer overflow-hidden absolute top-1 left-1 right-1 bottom-1`}
+      style={{ 
+        height: `${cardHeight}px`,
+        minHeight: '52px' // Minimum height to show basic content
+      }}
+      title={`${booking.customerName} - ${serviceNames} @ ${toDisplayAMPM(booking.bookingTime)} (${booking.totalDuration}min)`}
+    >
+      {/* Header Section with enhanced border effect */}
+      <div className={`${statusStyle.header} border-b border-white/20 px-2 py-1`}>
+        <div className="flex justify-between items-center min-w-0">
+          <div className="flex-1 min-w-0 pr-2">
+            <div className="font-extrabold text-sm truncate tracking-tight overflow-hidden text-ellipsis" title={booking.customerName}>
+              {booking.customerName}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0 min-w-0">
+            {booking.status === "past" && isAdmin && (
+              <button
+                onClick={handleInvoiceClick}
+                className="invoice-button text-[10px] px-2 py-1 rounded-lg bg-white text-gray-800 hover:bg-gray-100 transition-colors border border-gray-300 hover:border-gray-400 whitespace-nowrap font-bold shadow-sm flex-shrink-0"
+                title="Generate Invoice"
+              >
+                💰 Invoice
+              </button>
+            )}
+            {showTime && (
+              <span className="text-[10px] font-black bg-black bg-opacity-30 px-2 py-1 rounded-md whitespace-nowrap tracking-tight flex-shrink-0">
+                {toDisplayAMPM(booking.bookingTime)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Section with responsive text containment */}
+      <div className="p-2 h-full flex flex-col min-w-0">
+        {/* Services - Bold and clear with proper truncation */}
+        <div className="mb-2 flex-shrink-0 min-w-0">
+          <div className="text-xs font-semibold opacity-95 line-clamp-1 tracking-wide overflow-hidden text-ellipsis break-words" title={serviceNames}>
+            {serviceNames}
+          </div>
+        </div>
+
+        {/* Details Section - Responsive text containment */}
+        <div className="flex-1 min-h-0 space-y-1 min-w-0">
+          {/* Time Range - Responsive */}
+          <div className="flex items-center text-[11px] font-semibold opacity-95 min-w-0">
+            <Clock className="w-3 h-3 mr-1.5 flex-shrink-0" />
+            <span className="truncate tracking-wide overflow-hidden text-ellipsis min-w-0">
+              {toDisplayAMPM(booking.bookingTime)} - {toDisplayAMPM(position.endTime)}
+            </span>
+          </div>
+
+          {/* Payment Method - Responsive */}
+          <div className="flex items-center text-[11px] font-semibold opacity-95 min-w-0">
+            <CreditCard className="w-3 h-3 mr-1.5 flex-shrink-0" />
+            <span className="truncate tracking-wide overflow-hidden text-ellipsis min-w-0">{booking.paymentMethod || "cash"}</span>
+          </div>
+
+          {/* Staff - Responsive when shown */}
+          {booking.staff && slotDuration >= 2 && (
+            <div className="flex items-center text-[11px] font-semibold opacity-95 min-w-0">
+              <User className="w-3 h-3 mr-1.5 flex-shrink-0" />
+              <span className="truncate tracking-wide overflow-hidden text-ellipsis min-w-0">{booking.staff}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Duration indicator with better visibility */}
+        <div className="absolute bottom-1 right-1">
+          <div className="text-[10px] font-bold bg-black bg-opacity-40 px-2 py-0.5 rounded-md border border-white/20">
+            {booking.totalDuration || 30}m
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+BookingCard.displayName = 'BookingCard';
+
+// Memoized Staff Header component with enhanced styling
+const StaffHeader = memo(({ staffName }: { staffName: string }) => (
+  <div className="sticky top-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300 px-4 py-3 font-extrabold text-gray-800 text-sm truncate tracking-wide overflow-hidden text-ellipsis">
+    {staffName}
+  </div>
+));
+
+StaffHeader.displayName = 'StaffHeader';
+
+// Memoized Time Slot component with fixed height and enhanced styling
+const TimeSlot = memo(({ time }: { time: string }) => (
+  <div className="sticky left-0 z-10 bg-gray-100 border-r-2 border-gray-300 px-4 py-4 font-bold text-gray-800 h-[60px] flex items-center tracking-wide truncate overflow-hidden text-ellipsis">
+    {toDisplayAMPM(time)}
+  </div>
+));
+
+TimeSlot.displayName = 'TimeSlot';
 
 export function ScheduleBoard({
   bookings,
@@ -397,207 +237,213 @@ export function ScheduleBoard({
   onEditBooking,
   onGenerateInvoice
 }: ScheduleBoardProps) {
+  const { isAdmin } = useAuth();
 
-  const { isAdmin } = useAuth(); // ✅ Get role from AuthContext
-
-  // Remove duplicate staff names and ensure uniqueness
+  // Memoized unique staff
   const uniqueStaffOptions = useMemo(() => {
-    const seen = new Set();
-    return staffOptions.filter(staff => {
-      if (seen.has(staff)) {
-        console.warn(`Duplicate staff name found: ${staff}`);
-        return false;
-      }
-      seen.add(staff);
-      return true;
-    });
+    return [...new Set(staffOptions)];
   }, [staffOptions]);
 
-  const scheduleMatrix = useMemo(() => {
-    const map: Record<string, Record<string, Booking[]>> = {};
+  // Show ALL bookings from Firebase - no filtering by date/branch for now
+  const displayBookings = useMemo(() => {
+    console.log('All bookings from Firebase:', bookings);
+    return bookings;
+  }, [bookings]);
 
-    TIMESLOTS.forEach((t) => {
-      map[t] = {};
-      uniqueStaffOptions.forEach((s) => (map[t][s] = []));
-      map[t]["Unassigned"] = [];
+  // Memoized enabled time slots
+  const enabledTimeSlots = useMemo(() => {
+    return TIMESLOTS.filter(t => {
+      const hour = t.split(":")[0].padStart(2, "0");
+      return !!enabledHours[hour];
+    });
+  }, [enabledHours]);
+
+  // Memoized cell click handler
+  const handleCellClick = useCallback((staff: string, time: string) => {
+    onCellClick(staff, time);
+  }, [onCellClick]);
+
+  // Get all time slots that a booking spans
+  const getBookingTimeSlots = useCallback((booking: Booking) => {
+    const position = calculateBookingPosition(booking.bookingTime, booking.totalDuration || 30);
+    const timeSlots = [];
+    
+    for (let i = 0; i < position.durationInSlots; i++) {
+      const slotIndex = position.startSlotIndex + i;
+      if (slotIndex < TIMESLOTS.length) {
+        timeSlots.push(TIMESLOTS[slotIndex]);
+      }
+    }
+    
+    return timeSlots;
+  }, []);
+
+  // Create a map of which bookings should be displayed in which cells
+  const bookingCellMap = useMemo(() => {
+    const map: Record<string, Record<string, Booking[]>> = {};
+    
+    // Initialize the map structure
+    enabledTimeSlots.forEach(time => {
+      map[time] = {};
+      uniqueStaffOptions.forEach(staff => {
+        map[time][staff] = [];
+      });
     });
 
-    bookings.forEach((b) => {
-      const matchDate = format(b.bookingDate, "yyyy-MM-dd") === scheduleDate;
-      const matchBranch = scheduleBranch === "all" || b.branch === scheduleBranch;
-      const hour = b.bookingTime?.split(":")[0] ?? "";
-      const hourEnabled = !!enabledHours[hour];
+    // Place each booking in all the time slots it spans
+    displayBookings.forEach(booking => {
+      const timeSlots = getBookingTimeSlots(booking);
+      const staff = booking.staff && uniqueStaffOptions.includes(booking.staff) 
+        ? booking.staff 
+        : "Unassigned";
 
-      if (!matchDate || !matchBranch || !hourEnabled) return;
-
-      const t = b.bookingTime;
-      const sName = b.staff && uniqueStaffOptions.includes(b.staff) ? b.staff : "Unassigned";
-
-      if (!map[t]) map[t] = {};
-      if (!map[t][sName]) map[t][sName] = [];
-
-      map[t][sName].push(b);
+      timeSlots.forEach(timeSlot => {
+        if (map[timeSlot] && map[timeSlot][staff]) {
+          // Only add if not already present (avoid duplicates)
+          if (!map[timeSlot][staff].some(b => b.id === booking.id)) {
+            map[timeSlot][staff].push(booking);
+          }
+        }
+      });
     });
 
     return map;
-  }, [bookings, scheduleDate, scheduleBranch, uniqueStaffOptions, enabledHours]);
+  }, [displayBookings, enabledTimeSlots, uniqueStaffOptions, getBookingTimeSlots]);
 
-  const formatDate = (dateStr: string | Date) => {
-    const d = new Date(dateStr);
-    return `${d.getFullYear()}-${(d.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-  };
+  // Check if a booking should be the primary display in a slot (first slot)
+  const isPrimarySlot = useCallback((booking: Booking, time: string) => {
+    const position = calculateBookingPosition(booking.bookingTime, booking.totalDuration || 30);
+    return TIMESLOTS[position.startSlotIndex] === time;
+  }, []);
 
-  const normalizeTime = (timeStr: string) => {
-    if (!timeStr) return "";
-    let [hh, mm] = timeStr.split(":");
-    if (!mm) mm = "00";
-    const lowerTime = timeStr.toLowerCase();
-    const isPM = lowerTime.includes("pm");
-    const isAM = lowerTime.includes("am");
-    hh = hh.replace(/\D/g, "");
-    let hourNum = parseInt(hh, 10);
-    if (isPM && hourNum !== 12) hourNum += 12;
-    if (isAM && hourNum === 12) hourNum = 0;
-    return `${hourNum.toString().padStart(2, "0")}:${mm.substring(0, 2)}`;
-  };
+  // Get slot duration for a booking
+  const getSlotDuration = useCallback((booking: Booking) => {
+    const position = calculateBookingPosition(booking.bookingTime, booking.totalDuration || 30);
+    return position.durationInSlots;
+  }, []);
+
+  // Check if a cell is occupied by any booking (primary or secondary)
+  const isCellOccupied = useCallback((time: string, staff: string) => {
+    const cellBookings = bookingCellMap[time]?.[staff] || [];
+    return cellBookings.length > 0;
+  }, [bookingCellMap]);
+
+  // Check if a cell has primary bookings (should show booking cards)
+  const hasPrimaryBookings = useCallback((time: string, staff: string) => {
+    const cellBookings = bookingCellMap[time]?.[staff] || [];
+    return cellBookings.filter(booking => isPrimarySlot(booking, time)).length > 0;
+  }, [bookingCellMap, isPrimarySlot]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-slate-50 border border-white/20 shadow-2xl backdrop-blur-sm mb-0 animate-fade-in">
+    <div className="relative overflow-hidden rounded-2xl bg-slate-50 border-2 border-gray-300 shadow-2xl backdrop-blur-sm mb-0">
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
 
-      {/* Header */}
-      <div className="relative p-6 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white">
+      {/* Header with enhanced border */}
+      <div className="relative p-6 border-b-2 border-gray-300 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg animate-float">
+          <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg border-2 border-indigo-400">
             <Calendar className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-xl font-bold text-gray-800">Schedule Board</h3>
+          <h3 className="text-xl font-extrabold text-gray-800 tracking-wide">Schedule Board</h3>
           <div className="flex-1 h-px bg-gradient-to-r from-indigo-200 via-purple-200 to-transparent"></div>
+          <div className="text-sm font-semibold text-gray-600">
+            {displayBookings.length} bookings • {enabledTimeSlots.length} time slots
+          </div>
         </div>
       </div>
 
       <div className="relative overflow-x-auto w-full">
-        {TIMESLOTS.map((t) => {
-          const hour = t.split(":")[0].padStart(2, "0");
-          const hourEnabled = !!enabledHours[hour];
-          if (!hourEnabled) return null;
+        {/* Staff Header Row with enhanced borders */}
+        <div 
+          className="grid sticky top-0 z-30 bg-white border-b-2 border-gray-300"
+          style={{
+            gridTemplateColumns: `180px repeat(${uniqueStaffOptions.length}, 200px)`,
+          }}
+        >
+          <div className="sticky left-0 z-40 bg-white border-r-2 border-gray-300 px-4 py-3 font-extrabold text-gray-800 h-[60px] flex items-center tracking-wide">
+            Time
+          </div>
+          {uniqueStaffOptions.map((staffName) => (
+            <StaffHeader key={`staff-header-${staffName}`} staffName={staffName} />
+          ))}
+        </div>
 
-          return (
+        {/* Time Slots Rows - FIXED HEIGHT with enhanced borders */}
+        {enabledTimeSlots.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 font-semibold">
+            No time slots enabled. Please enable hours in the schedule controls.
+          </div>
+        ) : (
+          enabledTimeSlots.map((t) => (
             <div
               key={`timeslot-${t}`}
-              className="grid"
+              className="grid border-b border-gray-200"
               style={{
                 gridTemplateColumns: `180px repeat(${uniqueStaffOptions.length}, 200px)`,
+                height: '60px'
               }}
             >
-              <div className="sticky left-0 z-10 bg-gray-50 border-t border-b px-4 py-3 font-medium">
-                {toDisplayAMPM(t)}
-              </div>
+              <TimeSlot time={t} />
 
               {uniqueStaffOptions.map((sName) => {
-                const allItems = bookings.filter((b) => {
-                  const bookingDay = formatDate(b.bookingDate);
-                  const normalizedBookingTime = normalizeTime(b.bookingTime);
-                  const [startHour, startMin] = normalizedBookingTime.split(":").map(Number);
-                  const bookingStart = startHour * 60 + startMin;
-                  const bookingEnd = bookingStart + (b.totalDuration || 30);
-                  const normalizedSlotTime = normalizeTime(t);
-                  const [slotHour, slotMin] = normalizedSlotTime.split(":").map(Number);
-                  const slotMinutes = slotHour * 60 + slotMin;
-                  const staffMatch = b.staff ? b.staff === sName : true;
-                  return staffMatch && slotMinutes >= bookingStart && slotMinutes < bookingEnd;
-                });
+                const cellBookings = bookingCellMap[t]?.[sName] || [];
+                const primaryBookings = cellBookings.filter(booking => 
+                  isPrimarySlot(booking, t)
+                );
+                const isOccupied = isCellOccupied(t, sName);
+                const hasPrimary = hasPrimaryBookings(t, sName);
 
                 return (
                   <div
                     key={`cell-${t}-${sName}`}
-                    className={`min-h-[64px] ${!hourEnabled ? "bg-gray-50 opacity-70 pointer-events-none" : ""}`}
-                    onClick={(e) => {
-                      if (!hourEnabled) return;
-                      if (allItems.length === 0) onCellClick(sName, t);
-                    }}
+                    className={`border-r border-gray-200 transition-colors relative h-full ${
+                      !isOccupied ? 'hover:bg-gray-50/80 cursor-pointer' : ''
+                    }`}
+                    onClick={() => !isOccupied && handleCellClick(sName, t)}
                   >
-                    <div className="space-y-2">
-                      {allItems.map((b) => (
-                        <BookingCard
-                          key={`booking-${b.id}-${t}-${sName}`}
-                          booking={b}
-                          onEdit={onEditBooking}
-                          onGenerateInvoice={onGenerateInvoice}
-                          isAdmin={isAdmin} // ✅ Pass admin flag
-                        />
-                      ))}
+                    <div className="p-1 h-full relative">
+                      {/* Primary Bookings - positioned absolutely to prevent overlap */}
+                      {primaryBookings.map((b) => {
+                        const slotDuration = getSlotDuration(b);
+                        
+                        return (
+                          <BookingCard
+                            key={`booking-${b.id}-${t}-${sName}`}
+                            booking={b}
+                            onEdit={onEditBooking}
+                            onGenerateInvoice={onGenerateInvoice}
+                            isAdmin={isAdmin}
+                            showTime={isPrimarySlot(b, t)}
+                            slotDuration={slotDuration}
+                          />
+                        );
+                      })}
 
-                      {allItems.length === 0 && hourEnabled && (
-                        <div className="w-full h-full flex items-center justify-center">
+                      {/* Show "+" icon ONLY if cell is completely empty AND no primary bookings */}
+                      {!isOccupied && !hasPrimary && (
+                        <div className="w-full h-full flex items-center justify-center absolute inset-0">
                           <button
-                            className="text-[11px] text-emerald-700 hover:text-emerald-900"
-                            onClick={() => onCellClick(sName, t)}
+                            className="flex items-center justify-center w-10 h-10 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-full transition-all duration-200 border-2 border-dashed border-emerald-400 hover:border-emerald-500 hover:shadow-lg z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCellClick(sName, t);
+                            }}
+                            title="Add Booking"
                           >
-                            +
+                            <Plus className="w-5 h-5 font-bold" />
                           </button>
                         </div>
                       )}
+
+                      {/* REMOVED "Occupied" text to clean up design */}
+                      {/* Secondary slots will now appear as empty but won't show the "+" button */}
                     </div>
                   </div>
                 );
               })}
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function BookingCard({ booking, onEdit, onGenerateInvoice, isAdmin }: any) {
-  const handleInvoiceClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onGenerateInvoice(booking);
-  };
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (!(e.target as HTMLElement).closest('.invoice-button')) {
-      onEdit(booking);
-    }
-  };
-
-  return (
-    <div
-      onClick={handleCardClick}
-      className={`w-full text-left text-xs rounded-md border px-2 py-2 hover:shadow transition cursor-pointer ${getStatusBlock(
-        booking.status
-      )}`}
-      title={`${booking.customerName} @ ${booking.bookingTime}`}
-    >
-      <div className="flex justify-between items-start">
-        <div className="font-semibold truncate">{booking.customerName}</div>
-        <div className="flex items-center gap-2">
-          {/* ✅ Show Invoice button only if admin */}
-          {booking.status === "past" && isAdmin && (
-            <button
-              onClick={handleInvoiceClick}
-              className="invoice-button text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
-              title="Generate Invoice"
-            >
-              Invoice
-            </button>
-          )}
-          <span className="text-[11px] opacity-80">{toDisplayAMPM(booking.bookingTime)}</span>
-        </div>
-      </div>
-      <div className="truncate text-[12px]">
-        {booking.services.map((s: any) => s.serviceName).join(", ")}
-      </div>
-      <div className="flex items-center text-[11px] opacity-80 mt-1">
-        <Clock className="w-3 h-3 mr-1" />
-        {toDisplayAMPM(booking.bookingTime)} • {booking.totalDuration}m
-      </div>
-      <div className="flex items-center text-[11px] opacity-80 mt-1">
-        <CreditCard className="w-3 h-3 mr-1" />
-        {booking.paymentMethod || "cash"}
+          ))
+        )}
       </div>
     </div>
   );
