@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-
 import { 
   Category,
   Service,
@@ -25,25 +24,40 @@ export default function Dashboard() {
   useEffect(() => {
     let loadedCount = 0;
     const totalCollections = 4;
+    
     const checkAllLoaded = () => {
       loadedCount++;
-      if (loadedCount === totalCollections) setLoading(false);
+      if (loadedCount === totalCollections) {
+        setTimeout(() => setLoading(false), 500);
+      }
     };
 
     const unsubscribeCategories = subscribeToCategoriesChanges(
-      (updatedCategories) => { setCategories(updatedCategories); checkAllLoaded(); }
+      (updatedCategories) => { 
+        setCategories(updatedCategories || []); 
+        checkAllLoaded(); 
+      }
     );
 
     const unsubscribeServices = subscribeToServicesChanges(
-      (updatedServices) => { setServices(updatedServices); checkAllLoaded(); }
+      (updatedServices) => { 
+        setServices(updatedServices || []); 
+        checkAllLoaded(); 
+      }
     );
 
     const unsubscribeBranches = subscribeToBranchesChanges(
-      (updatedBranches) => { setBranches(updatedBranches); checkAllLoaded(); }
+      (updatedBranches) => { 
+        setBranches(updatedBranches || []); 
+        checkAllLoaded(); 
+      }
     );
 
     const unsubscribeOffers = subscribeToOffersChanges(
-      (updatedOffers) => { setOffers(updatedOffers); checkAllLoaded(); }
+      (updatedOffers) => { 
+        setOffers(updatedOffers || []); 
+        checkAllLoaded(); 
+      }
     );
 
     return () => {
@@ -54,75 +68,104 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Stats calculations (real-time)
-  const menServices = services.filter(service => service.category.toLowerCase().includes('men'));
-  const womenServices = services.filter(service => service.category.toLowerCase().includes('women'));
-  const activeServices = services.filter(service => service.isActive);
-  const activeOffers = offers.filter(offer => offer.isActive && new Date(offer.validTo) >= new Date());
-  const totalRevenue = services.reduce((sum, service) => sum + (service.price || 0), 0);
+  // Stats calculations (real-time) - memoized for performance
+  const stats = useMemo(() => {
+    const activeServices = services.filter(service => service?.isActive);
+    const activeOffers = offers.filter(offer => offer?.isActive && new Date(offer.validTo || '') >= new Date());
+    const totalRevenue = services.reduce((sum, service) => sum + (service?.price || 0), 0);
+    const categoriesWithServices = categories.filter(cat => cat?.serviceCount > 0).length;
+    const activeBranches = branches.filter(b => b?.isActive).length;
 
-  const stats = [
-    { 
-      name: 'Total Services', 
-      value: services.length.toString(), 
-      change: `${activeServices.length} active`, 
-      color: 'from-pink-500 to-rose-500',
-      icon: '✂️',
-      bgIcon: '🎯'
-    },
-    { 
-      name: 'Categories', 
-      value: categories.length.toString(), 
-      change: `${categories.filter(cat => cat.serviceCount > 0).length} with services`, 
-      color: 'from-blue-500 to-cyan-500',
-      icon: '📂',
-      bgIcon: '📊'
-    },
-    { 
-      name: 'Active Offers', 
-      value: offers.length.toString(), 
-      change: `AED ${totalRevenue.toFixed(0)} total value`, 
-      color: 'from-purple-500 to-indigo-500',
-      icon: '🏷️',
-      bgIcon: '💎'
-    },
-    { 
-      name: 'Branches', 
-      value: branches.length.toString(), 
-      change: `${branches.filter(b => b.isActive).length} active locations`, 
-      color: 'from-green-500 to-emerald-500',
-      icon: '🏢',
-      bgIcon: '🌟'
-    }
-  ];
+    return [
+      { 
+        name: 'Total Services', 
+        value: services.length.toString(), 
+        change: `${activeServices.length} active`, 
+        color: 'from-pink-500 to-rose-500',
+        icon: '✂️',
+        bgIcon: '🎯'
+      },
+      { 
+        name: 'Categories', 
+        value: categories.length.toString(), 
+        change: `${categoriesWithServices} with services`, 
+        color: 'from-blue-500 to-cyan-500',
+        icon: '📂',
+        bgIcon: '📊'
+      },
+      { 
+        name: 'Active Offers', 
+        value: offers.length.toString(), 
+        change: `AED ${totalRevenue.toFixed(0)} total value`, 
+        color: 'from-purple-500 to-indigo-500',
+        icon: '🏷️',
+        bgIcon: '💎'
+      },
+      { 
+        name: 'Branches', 
+        value: branches.length.toString(), 
+        change: `${activeBranches} active locations`, 
+        color: 'from-green-500 to-emerald-500',
+        icon: '🏢',
+        bgIcon: '🌟'
+      }
+    ];
+  }, [services, categories, offers, branches]);
 
-  // Recent activity
-  const recentActivity = [
-    ...services.slice(0, 2).map(service => ({ 
-      action: 'Service added', 
-      item: service.name, 
-      time: service.createdAt ? getTimeAgo(service.createdAt.toDate()) : 'Recently', 
-      type: 'service',
-      icon: '✂️',
-      color: 'text-pink-600 bg-pink-50'
-    })),
-    ...categories.slice(0, 2).map(category => ({ 
-      action: 'Category added', 
-      item: category.name, 
-      time: category.createdAt ? getTimeAgo(category.createdAt.toDate()) : 'Recently', 
-      type: 'category',
-      icon: '📂',
-      color: 'text-blue-600 bg-blue-50'
-    })),
-    ...branches.slice(0, 1).map(branch => ({ 
-      action: 'Branch added', 
-      item: branch.name, 
-      time: branch.createdAt ? getTimeAgo(branch.createdAt.toDate()) : 'Recently', 
-      type: 'branch',
-      icon: '🏢',
-      color: 'text-green-600 bg-green-50'
-    }))
-  ].slice(0, 5);
+  // Real-time recent activity - updates whenever any data changes
+  const recentActivity = useMemo(() => {
+    const allActivities = [
+      ...services.map(service => ({ 
+        action: 'Service added', 
+        item: service?.name || 'Unnamed Service', 
+        time: service?.createdAt ? service.createdAt.toDate() : new Date(),
+        timestamp: service?.createdAt ? service.createdAt.toDate().getTime() : Date.now(),
+        type: 'service',
+        icon: '✂️',
+        color: 'text-pink-600 bg-pink-50',
+        id: service?.id || `service-${Date.now()}`
+      })),
+      ...categories.map(category => ({ 
+        action: 'Category added', 
+        item: category?.name || 'Unnamed Category', 
+        time: category?.createdAt ? category.createdAt.toDate() : new Date(),
+        timestamp: category?.createdAt ? category.createdAt.toDate().getTime() : Date.now(),
+        type: 'category',
+        icon: '📂',
+        color: 'text-blue-600 bg-blue-50',
+        id: category?.id || `category-${Date.now()}`
+      })),
+      ...branches.map(branch => ({ 
+        action: 'Branch added', 
+        item: branch?.name || 'Unnamed Branch', 
+        time: branch?.createdAt ? branch.createdAt.toDate() : new Date(),
+        timestamp: branch?.createdAt ? branch.createdAt.toDate().getTime() : Date.now(),
+        type: 'branch',
+        icon: '🏢',
+        color: 'text-green-600 bg-green-50',
+        id: branch?.id || `branch-${Date.now()}`
+      })),
+      ...offers.map(offer => ({ 
+        action: 'Offer created', 
+        item: offer?.name || 'Unnamed Offer', 
+        time: offer?.createdAt ? offer.createdAt.toDate() : new Date(),
+        timestamp: offer?.createdAt ? offer.createdAt.toDate().getTime() : Date.now(),
+        type: 'offer',
+        icon: '🏷️',
+        color: 'text-purple-600 bg-purple-50',
+        id: offer?.id || `offer-${Date.now()}`
+      }))
+    ].filter(activity => activity.item); // Filter out any activities with empty items
+
+    // Sort by timestamp (newest first) and take latest 5
+    return allActivities
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5)
+      .map(activity => ({
+        ...activity,
+        time: getTimeAgo(activity.time)
+      }));
+  }, [services, categories, branches, offers]);
 
   const quickActions = [
     { 
@@ -151,10 +194,19 @@ export default function Dashboard() {
   function getTimeAgo(date: Date): string {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    // For older items, show the date
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   const getCurrentGreeting = () => {
@@ -165,7 +217,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white w-full">
+    <div className="min-h-screen bg-white w-full flex flex-col">
       {/* Clean Header - Full width */}
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white w-full">
         <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
@@ -189,12 +241,12 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content - Full width responsive */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 w-full max-w-full">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-6 w-full max-w-full">
         {/* Stats Section - Responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 w-full">
           {(loading ? Array.from({ length: 4 }) : stats).map((stat, index) => (
             <div
-              key={index}
+              key={stat?.name || index}
               className="group relative overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 w-full"
             >
               {loading ? (
@@ -207,28 +259,28 @@ export default function Dashboard() {
                 <>
                   {/* Background Pattern */}
                   <div className="absolute top-0 right-0 -mt-2 -mr-2 text-4xl opacity-5">
-                    {stat.bgIcon}
+                    {stat?.bgIcon || '📊'}
                   </div>
                   
                   <div className="relative p-4 sm:p-6 w-full">
                     <div className="flex items-center justify-between mb-4 w-full">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center text-white text-lg sm:text-xl shadow-sm flex-shrink-0`}>
-                        {stat.icon}
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-r ${stat?.color || 'from-gray-500 to-gray-600'} flex items-center justify-center text-white text-lg sm:text-xl shadow-sm flex-shrink-0`}>
+                        {stat?.icon || '📊'}
                       </div>
-                      <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${stat.color} text-white text-xs font-semibold opacity-90 flex-shrink-0`}>
+                      <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${stat?.color || 'from-gray-500 to-gray-600'} text-white text-xs font-semibold opacity-90 flex-shrink-0`}>
                         Live
                       </div>
                     </div>
                     
                     <div className="space-y-2 w-full">
                       <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide truncate">
-                        {stat.name}
+                        {stat?.name || 'Loading...'}
                       </p>
                       <p className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
-                        {stat.value}
+                        {stat?.value || '0'}
                       </p>
                       <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">
-                        {stat.change}
+                        {stat?.change || 'No data'}
                       </p>
                     </div>
                   </div>
@@ -281,7 +333,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Activity - Full width */}
+        {/* Recent Activity - Full width - NOW REAL-TIME */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 w-full">
           <div className="flex items-center justify-between mb-4 sm:mb-6 w-full">
             <div className="flex items-center min-w-0">
@@ -291,7 +343,7 @@ export default function Dashboard() {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Recent Activity</h2>
             </div>
             <div className="text-xs sm:text-sm text-gray-500 font-medium flex-shrink-0 ml-4">
-              Last 24 hours
+              Real-time updates
             </div>
           </div>
           
@@ -314,7 +366,7 @@ export default function Dashboard() {
             ) : recentActivity.length > 0 ? (
               recentActivity.map((activity, idx) => (
                 <div
-                  key={idx}
+                  key={`${activity.type}-${activity.id}-${idx}`}
                   className="group rounded-lg sm:rounded-xl p-3 sm:p-4 bg-gray-50 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-300 w-full"
                 >
                   <div className="flex items-center justify-between w-full">

@@ -91,8 +91,6 @@ const STAFF_FALLBACK = ['Komal', 'Shameem', 'Do Thi Kim', 'Alishba'];
 
 const TIMELINE_OPTIONS = ['today', 'yesterday', 'this_week', 'this_month', 'custom'] as const;
 
-
-
 /* =========================== Component =========================== */
 
 export default function BookingsAndFinancePage() {
@@ -123,6 +121,7 @@ export default function BookingsAndFinancePage() {
   const [smsConfirmation, setSmsConfirmation] = useState(false);
   const [customerEmail, setCustomerEmail] = useState('');
   const [status, setStatus] = useState<BookingStatus>('upcoming');
+  const [staff, setStaff] = useState('');
 
   const [staffFromDB, setStaffFromDB] = useState<string[]>([]);
   const STAFF_OPTIONS = staffFromDB.length ? staffFromDB : STAFF_FALLBACK;
@@ -283,13 +282,16 @@ export default function BookingsAndFinancePage() {
       const inHand = Number(b.inHand ?? Math.max(0, netSales + tips - excluded));
       totals.inHandCollection += inHand;
 
-      // payment method breakdown
-      const method = (b.paymentMethod || 'cash').toLowerCase();
+      // FIXED: Safe payment method handling
+      const rawMethod = b.paymentMethod;
+      const method = typeof rawMethod === 'string' ? rawMethod.toLowerCase() : 'cash';
+      
       if (!totals.paymentMethods[method]) totals.paymentMethods[method] = 0;
+      
       // If booking has paymentDetails (map of methods->amount), prefer that
       if (b.paymentDetails && typeof b.paymentDetails === 'object') {
         Object.entries(b.paymentDetails).forEach(([pm, amt]) => {
-          const key = pm.toLowerCase();
+          const key = String(pm).toLowerCase();
           totals.paymentMethods[key] = (totals.paymentMethods[key] || 0) + Number(amt || 0);
         });
       } else {
@@ -454,13 +456,10 @@ export default function BookingsAndFinancePage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Bookings & Finance</h1>
-          <p className="text-sm text-gray-500">Merged bookings UI + Finance reports (realtime from Firestore)</p>
+          <h1 className="text-2xl font-bold">Bookings</h1>
+          <p className="text-sm text-gray-500">All Bookings From Booking Calender for Action (realtime from Firestore)</p>
         </div>
-        <div className="flex space-x-2">
-          <button onClick={() => setView('bookings')} className={`px-3 py-2 rounded ${view==='bookings' ? 'bg-pink-600 text-white' : 'bg-gray-100'}`}>Bookings</button>
-   
-        </div>
+        
       </div>
 
       {/* ------------------ BOOKINGS VIEW (original merged) ------------------ */}
@@ -478,7 +477,7 @@ export default function BookingsAndFinancePage() {
               <option value="past">Past</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            {/* <button onClick={() => { setShowCreate(true); resetForm(); }} className="px-3 py-2 bg-emerald-600 text-white rounded">Add Booking</button> */}
+            <button onClick={() => { setShowCreate(true); resetForm(); }} className="px-3 py-2 bg-pink-600 text-white rounded">Add Booking</button>
           </div>
 
           {/* bookings table */}
@@ -523,9 +522,9 @@ export default function BookingsAndFinancePage() {
                     <td className="px-4 py-3"><span className="px-2 py-1 rounded-full bg-gray-100 text-xs">{b.status}</span></td>
                     <td className="px-4 py-3" onClick={(e)=>e.stopPropagation()}>
                      <div className="flex gap-2">
-  {/* <button onClick={() => openForEdit(b)} title="Edit" className="text-emerald-700">
+  <button onClick={() => openForEdit(b)} title="Edit" className="text-emerald-700">
     <Edit3 className="w-4 h-4" />
-  </button> */}
+  </button>
 
   {/* Ye icons ab har status pr show honge */}
   <button 
@@ -586,11 +585,16 @@ export default function BookingsAndFinancePage() {
                     </div>
                     <div>
                       <label className="text-sm">Staff</label>
-                      <select value={''} onChange={()=>{}} className="w-full border rounded p-2"><option>—</option></select>
+                      <select value={staff} onChange={e=>setStaff(e.target.value)} className="w-full border rounded p-2">
+                        <option value="">—</option>
+                        {STAFF_OPTIONS.map(s=> <option key={s} value={s}>{s}</option>)}
+                      </select>
                     </div>
                     <div>
                       <label className="text-sm">Payment</label>
-                      <select value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)} className="w-full border rounded p-2">{['cash','card'].map(p=> <option key={p} value={p}>{p}</option>)}</select>
+                      <select value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)} className="w-full border rounded p-2">
+                        {PAYMENT_METHODS.map(p=> <option key={p} value={p}>{p}</option>)}
+                      </select>
                     </div>
                   </div>
 
@@ -609,6 +613,32 @@ export default function BookingsAndFinancePage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm">Customer Email</label>
+                      <input type="email" value={customerEmail} onChange={e=>setCustomerEmail(e.target.value)} className="w-full border rounded p-2" />
+                    </div>
+                    <div>
+                      <label className="text-sm">Status</label>
+                      <select value={status} onChange={e=>setStatus(e.target.value as BookingStatus)} className="w-full border rounded p-2">
+                        <option value="upcoming">Upcoming</option>
+                        <option value="past">Past</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input type="checkbox" checked={emailConfirmation} onChange={e=>setEmailConfirmation(e.target.checked)} className="mr-2" />
+                      Email Confirmation
+                    </label>
+                    <label className="flex items-center">
+                      <input type="checkbox" checked={smsConfirmation} onChange={e=>setSmsConfirmation(e.target.checked)} className="mr-2" />
+                      SMS Confirmation
+                    </label>
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <button className="px-3 py-2 bg-gray-100 rounded" onClick={()=>{ setShowCreate(false); resetForm(); }}>Close</button>
                     <button className="px-3 py-2 bg-emerald-600 text-white rounded" onClick={async()=>{ /* minimal save */ alert('Use back-end saving as needed'); }}>Save</button>
@@ -621,11 +651,132 @@ export default function BookingsAndFinancePage() {
       )}
 
       {/* ------------------ FINANCE VIEW ------------------ */}
-      
+      {view === 'finance' && (
+        <div>
+          {/* Finance filters */}
+          <div className="bg-white rounded-lg p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-sm">Timeline</label>
+              <select value={timeline} onChange={e=>setTimeline(e.target.value as any)} className="w-full border rounded p-2">
+                {TIMELINE_OPTIONS.map(t=> <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm">From</label>
+              <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="w-full border rounded p-2" />
+            </div>
+            <div>
+              <label className="text-sm">To</label>
+              <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="w-full border rounded p-2" />
+            </div>
+            <div>
+              <label className="text-sm">Branch</label>
+              <select value={financeBranch} onChange={e=>setFinanceBranch(e.target.value)} className="w-full border rounded p-2">
+                <option value="all">All Branches</option>
+                {BRANCH_OPTIONS.map(b=> <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+          </div>
 
+          {/* Finance totals cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-lg p-4 shadow">
+              <div className="text-sm text-gray-500">Net Sales</div>
+              <div className="text-2xl font-bold">${financeTotals.sales.toFixed(2)}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow">
+              <div className="text-sm text-gray-500">Total Collection</div>
+              <div className="text-2xl font-bold">${financeTotals.collection.toFixed(2)}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow">
+              <div className="text-sm text-gray-500">In Hand Collection</div>
+              <div className="text-2xl font-bold">${financeTotals.inHandCollection.toFixed(2)}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow">
+              <div className="text-sm text-gray-500">Total Tips</div>
+              <div className="text-2xl font-bold">${financeTotals.tips.toFixed(2)}</div>
+            </div>
+          </div>
+
+          {/* Payment methods breakdown */}
+          <div className="bg-white rounded-lg p-4 mb-6">
+            <h3 className="font-semibold mb-4">Payment Methods Breakdown</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Object.entries(financeTotals.paymentMethods || {}).map(([method, amount]: [string, any]) => (
+                amount > 0 && (
+                  <div key={method} className="text-center p-3 bg-gray-50 rounded">
+                    <div className="text-sm text-gray-500 capitalize">{method.replace('_', ' ')}</div>
+                    <div className="font-semibold">${amount.toFixed(2)}</div>
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+
+          {/* Export button */}
+          <div className="flex justify-end mb-4">
+            <button onClick={exportFinancePDF} className="px-4 py-2 bg-pink-600 text-white rounded flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Export Finance PDF
+            </button>
+          </div>
+
+          {/* Finance table */}
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left">Customer</th>
+                  <th className="px-4 py-2 text-left">Date & Time</th>
+                  <th className="px-4 py-2 text-left">Branch</th>
+                  <th className="px-4 py-2 text-left">Staff</th>
+                  <th className="px-4 py-2 text-left">Gross</th>
+                  <th className="px-4 py-2 text-left">Discount</th>
+                  <th className="px-4 py-2 text-left">Net Sales</th>
+                  <th className="px-4 py-2 text-left">Tax</th>
+                  <th className="px-4 py-2 text-left">Tips</th>
+                  <th className="px-4 py-2 text-left">Payment Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financeFiltered.map((b) => {
+                  const gross = Number(b.grossSales ?? b.totalPrice) || 0;
+                  const discount = Number(b.discount ?? 0) || 0;
+                  const refunds = Number(b.refunds ?? 0) || 0;
+                  const adjustments = Number(b.adjustments ?? 0) || 0;
+                  const tax = Number(b.tax ?? 0) || 0;
+                  const tips = Number(b.tips ?? 0) || 0;
+                  const netSales = gross - discount - refunds + adjustments;
+                  
+                  return (
+                    <tr key={b.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{b.customerName}</div>
+                        <div className="text-xs text-gray-500">{b.customerEmail || 'No email'}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>{format(b.bookingDate, 'MMM dd, yyyy')}</div>
+                        <div className="text-xs text-gray-500">{b.bookingTime}</div>
+                      </td>
+                      <td className="px-4 py-3">{b.branch}</td>
+                      <td className="px-4 py-3">{b.staff || '—'}</td>
+                      <td className="px-4 py-3">${gross.toFixed(2)}</td>
+                      <td className="px-4 py-3">${discount.toFixed(2)}</td>
+                      <td className="px-4 py-3">${netSales.toFixed(2)}</td>
+                      <td className="px-4 py-3">${tax.toFixed(2)}</td>
+                      <td className="px-4 py-3">${tips.toFixed(2)}</td>
+                      <td className="px-4 py-3 capitalize">{b.paymentMethod?.replace('_', ' ') || 'cash'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {financeFiltered.length === 0 && <div className="text-center py-10 text-gray-500">No finance records found for selected period.</div>}
+        </div>
+      )}
     </div>
     </AccessWrapper>
   );
 }
-
-

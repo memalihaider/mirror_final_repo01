@@ -421,24 +421,17 @@ export function BookingModal({
                   ))}
                 </select>
               </div>
+            </div>
 
-              {/* Payment Method */}
-              
-<div>
+            {/* Payment Method - FIXED: Remove multiple attribute */}
+            <div>
               <label className="block text-sm font-medium text-gray-700">
                 Payment Method
               </label>
               <select
-                multiple
                 className="mt-1 w-full border rounded-md px-3 py-2"
                 value={formData.paymentMethod}
-                onChange={(e) => {
-                  const selected = Array.from(
-                    e.target.selectedOptions,
-                    (option) => option.value
-                  );
-                  handleInputChange("paymentMethod", selected);
-                }}
+                onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
               >
                 {paymentMethods.length > 0
                   ? paymentMethods.map((method: any) => (
@@ -456,7 +449,7 @@ export function BookingModal({
                     ))}
                 <option value="custom">Custom</option>
               </select>
-              {formData.paymentMethod.includes("custom") && (
+              {formData.paymentMethod === "custom" && (
                 <div className="mt-2">
                   <input
                     type="text"
@@ -470,7 +463,7 @@ export function BookingModal({
                 </div>
               )}
             </div>
-</div>
+
             {/* Date & Time */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -650,5 +643,3 @@ export function BookingModal({
     </div>
   );
 }
-
-

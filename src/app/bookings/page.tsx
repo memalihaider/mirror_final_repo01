@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import AccessWrapper from "@/components/AccessWrapper";
 import { ClientOnly } from '@/components/ClientOnly';
-import { BookingsHeader } from '@/components/BookingsHeader';
-import { BookingsFilterBar } from '@/components/BookingsFilterBar';
+// import { BookingsFilterBar } from '@/components/BookingsFilterBar';
 import { ScheduleDashboard } from '@/components/ScheduleDashboard';
-import { ScheduleBoard } from '@/components/ScheduleBoard';
+import ScheduleBoard from '@/components/ScheduleBoard';
 import { BookingModal } from '@/components/BookingModal';
 import { InvoiceModal } from '@/components/InvoiceModal';
 import { useBookings } from '@/hooks/useBookings';
@@ -67,6 +66,38 @@ export default function BookingsPage() {
   
   // Hours management - memoized initial state
   const [enabledHours, setEnabledHours] = useState<Record<string, boolean>>(INITIAL_ENABLED_HOURS);
+
+  // Loading state management
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  // Simulate loading progress
+  useEffect(() => {
+    if (!loading && !resourcesLoading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 500); // Small delay to ensure smooth transition
+      return () => clearTimeout(timer);
+    }
+  }, [loading, resourcesLoading]);
+
+  // Loading progress simulation
+  useEffect(() => {
+    if (isLoading) {
+      const interval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 90) return 90; // Cap at 90% until actual loading completes
+          return prev + 10;
+        });
+      }, 200);
+
+      return () => clearInterval(interval);
+    } else {
+      setLoadingProgress(100);
+      const timer = setTimeout(() => setLoadingProgress(0), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   // Optimized filtered bookings with early returns and variable caching
   const filteredBookings = useMemo(() => {
@@ -253,14 +284,39 @@ export default function BookingsPage() {
   const handleCloseCreateModal = useCallback(() => setShowCreateModal(false), []);
   const handleCloseInvoiceModal = useCallback(() => setShowInvoiceModal(false), []);
 
-  // Loading state
-  if (loading || resourcesLoading) {
+  // Loading screen
+  if (isLoading) {
     return (
-      <div className="p-6 w-full">
-        <div className="w-full">
-          <div className="flex items-center justify-center py-12 w-full">
-            <div className="rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
-            <span className="ml-3 text-pink-600">Loading bookings...</span>
+      <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col items-center justify-center">
+        <div className="w-64 max-w-full mx-auto">
+          {/* Loading spinner */}
+          <div className="flex justify-center mb-6">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-pink-600"></div>
+          </div>
+          
+          {/* Loading text */}
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
+              Loading Bookings
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              Preparing your schedule...
+            </p>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
+            <div 
+              className="bg-pink-600 h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${loadingProgress}%` }}
+            ></div>
+          </div>
+
+          {/* Progress percentage */}
+          <div className="text-center">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {loadingProgress}%
+            </span>
           </div>
         </div>
       </div>
@@ -273,12 +329,12 @@ export default function BookingsPage() {
         <div className="w-full px-4 sm:px-6 lg:px-8 dark:text-white">
           {/* <BookingsHeader onAddBooking={handleOpenCreate} /> */}
           
-          <BookingsFilterBar
+          {/* <BookingsFilterBar
             branches={memoizedBranches}
             staff={staff}
             uniqueTimes={uniqueTimes}
             onFiltersChange={setFilters}
-          />
+          /> */}
 
           <ScheduleDashboard
             bookings={filteredBookings}

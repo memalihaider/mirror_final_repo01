@@ -331,7 +331,7 @@ const MobileSidebarContent = React.memo(({
             <span className="text-white font-bold text-sm">M</span>
           </div>
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Mirrors
+            Mirrors Beauty Lounge
           </h1>
         </div>
         <button
