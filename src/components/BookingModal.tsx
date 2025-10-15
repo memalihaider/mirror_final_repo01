@@ -423,22 +423,25 @@ export function BookingModal({
               </div>
 
               {/* Payment Method */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Payment Method
-                </label>
-                <select
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.paymentMethod}
-                  onChange={(e) => {
-                    handleInputChange('paymentMethod', e.target.value);
-                    if (e.target.value !== "custom") {
-                      handleInputChange('customPaymentMethod', "");
-                    }
-                  }}
-                >
-                  {paymentMethods.length > 0
-                    ? paymentMethods.map((method: any) => (
+              
+<div>
+              <label className="block text-sm font-medium text-gray-700">
+                Payment Method
+              </label>
+              <select
+                multiple
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                value={formData.paymentMethod}
+                onChange={(e) => {
+                  const selected = Array.from(
+                    e.target.selectedOptions,
+                    (option) => option.value
+                  );
+                  handleInputChange("paymentMethod", selected);
+                }}
+              >
+                {paymentMethods.length > 0
+                  ? paymentMethods.map((method: any) => (
                       <option
                         key={method.id}
                         value={method.name || method.method || method.title || ""}
@@ -446,31 +449,28 @@ export function BookingModal({
                         {(method.name || method.method || method.title || "").toUpperCase()}
                       </option>
                     ))
-                    : PAYMENT_METHODS.map((p) => (
+                  : PAYMENT_METHODS.map((p) => (
                       <option key={p} value={p}>
                         {p.toUpperCase()}
                       </option>
                     ))}
-                  <option value="custom">Custom</option>
-                </select>
-
-                {formData.paymentMethod === "custom" && (
-                  <div className="mt-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Custom Payment Method
-                    </label>
-                    <input
-                      type="text"
-                      className="mt-1 w-full border rounded-md px-3 py-2"
-                      placeholder="Enter custom payment method"
-                      value={formData.customPaymentMethod}
-                      onChange={(e) => handleInputChange('customPaymentMethod', e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
+                <option value="custom">Custom</option>
+              </select>
+              {formData.paymentMethod.includes("custom") && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    placeholder="Enter custom payment method"
+                    value={formData.customPaymentMethod}
+                    onChange={(e) =>
+                      handleInputChange("customPaymentMethod", e.target.value)
+                    }
+                  />
+                </div>
+              )}
             </div>
-
+</div>
             {/* Date & Time */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -650,3 +650,5 @@ export function BookingModal({
     </div>
   );
 }
+
+

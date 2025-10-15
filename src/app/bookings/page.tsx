@@ -311,8 +311,7 @@ export default function BookingsPage() {
             </div>
           )}
 
-          <BookingModal
-            isOpen={showCreateModal}
+          <BookingModal isOpen={showCreateModal}
             isEditing={!!editingId}
             editingId={editingId}
             bookingData={bookingFormData}

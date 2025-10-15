@@ -146,7 +146,7 @@ const BookingCard = memo(({ booking, onEdit, onGenerateInvoice, isAdmin, showTim
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0 min-w-0">
-            {booking.status === "past" && isAdmin && (
+            {booking.status === "past" &&(
               <button
                 onClick={handleInvoiceClick}
                 className="invoice-button text-[10px] px-2 py-1 rounded-lg bg-white text-gray-800 hover:bg-gray-100 transition-colors border border-gray-300 hover:border-gray-400 whitespace-nowrap font-bold shadow-sm flex-shrink-0"
@@ -534,3 +534,4 @@ export function ScheduleBoard({
     </div>
   );
 }
+
