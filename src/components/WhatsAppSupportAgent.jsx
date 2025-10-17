@@ -92,7 +92,7 @@ export default function FAQAgent() {
         {isOpen && (
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-80 sm:w-96 h-96 mb-4 overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white">
+            <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -130,7 +130,7 @@ export default function FAQAgent() {
                       <div
                         className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                           message.type === 'user'
-                            ? 'bg-blue-500 text-white rounded-br-none'
+                            ? 'bg-pink-500 text-white rounded-br-none'
                             : 'bg-white border border-gray-200 rounded-bl-none'
                         }`}
                       >
@@ -152,7 +152,7 @@ export default function FAQAgent() {
                     onClick={() => handleQuestionClick(faq, index)}
                     className={`w-full text-left p-2 rounded-lg text-xs transition-colors ${
                       selectedQuestion === index
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        ? 'bg-blue-50 text-pink-700 border border-blue-200'
                         : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
                     }`}
                   >
@@ -180,18 +180,18 @@ export default function FAQAgent() {
         {/* FAQ Agent Button (Main Button) */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="relative bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-4 rounded-2xl shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center justify-center group"
+          className="relative bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white p-4 rounded-2xl shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center justify-center group"
         >
           {/* Pulsing effect */}
           {isPulsing && (
-            <div className="absolute inset-0 rounded-2xl bg-blue-400 animate-ping opacity-20"></div>
+            <div className="absolute inset-0 rounded-2xl bg-pink-400 animate-ping opacity-20"></div>
           )}
           
           {/* Main icon container */}
           <div className="relative z-10 transform group-hover:scale-110 transition-transform duration-300">
             {/* FAQ Agent Icon */}
             <div className="relative">
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               
@@ -213,7 +213,7 @@ export default function FAQAgent() {
         {showScrollTop && (
           <button
             onClick={scrollToTop}
-            className="bg-gradient-to-br from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white p-3 rounded-2xl shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center justify-center group"
+            className="bg-gradient-to-br from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white p-3 rounded-2xl shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center justify-center group"
           >
             <div className="relative z-10 transform group-hover:scale-110 transition-transform duration-300">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

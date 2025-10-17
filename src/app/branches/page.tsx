@@ -188,12 +188,12 @@ export default function BranchesPage() {
                 <div className="max-w-6xl mx-auto">
                     <div className="flex items-center justify-between mb-6">
                         <h1 className="text-2xl font-bold text-gray-900">Branches</h1>
-                        <button
+                        {/* <button
                             onClick={() => setShowModal(true)}
                             className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
                         >
                             Add Branch
-                        </button>
+                        </button> */}
                     </div>
 
                     {branches.length === 0 ? (
