@@ -120,6 +120,16 @@ interface PaymentDetailRowProps {
   showRemove: boolean;
 }
 
+// Memoized PaymentDetailRow component - performance optimized
+interface PaymentDetailRowProps {
+  payment: PaymentDetail;
+  index: number;
+  paymentMethods: any[];
+  onChange: (index: number, field: string, value: any) => void;
+  onRemove: (index: number) => void;
+  showRemove: boolean;
+}
+
 const PaymentDetailRow = memo(({ payment, index, paymentMethods, onChange, onRemove, showRemove }: PaymentDetailRowProps) => {
   const handleChange = useCallback((field: string, value: any) => {
     onChange(index, field, value);
@@ -129,17 +139,10 @@ const PaymentDetailRow = memo(({ payment, index, paymentMethods, onChange, onRem
     onRemove(index);
   }, [index, onRemove]);
 
-  // Memoize default payment methods to prevent recreation
-  const defaultPaymentMethods = useMemo(() => [
-    "cash", "card", "tabby", "tamara", "apple pay", "google pay", 
-    "samsung wallet", "paypal", "american express", "ewallet STC pay", 
-    "bank transfer", "cash on delivery", "other"
-  ], []);
-
-  // Memoize payment method options
+  // Use cached payment methods to prevent recreation - performance optimized
   const paymentMethodOptions = useMemo(() => {
-    return paymentMethods.length > 0 ? paymentMethods : defaultPaymentMethods;
-  }, [paymentMethods, defaultPaymentMethods]);
+    return paymentMethods.length > 0 ? paymentMethods : PAYMENT_METHODS;
+  }, [paymentMethods]);
 
   return (
     <div className="grid grid-cols-12 gap-2 px-4 py-3 border-t">
@@ -159,7 +162,7 @@ const PaymentDetailRow = memo(({ payment, index, paymentMethods, onChange, onRem
                   {(method.name || method.method || method.title || "").toUpperCase()}
                 </option>
               ))
-            : defaultPaymentMethods.map((p) => (
+            : PAYMENT_METHODS.map((p) => (
                 <option key={p} value={p}>
                   {p.toUpperCase()}
                 </option>
@@ -219,39 +222,62 @@ const emptyService: BookingService = {
   staffMember: "",
 };
 
-const BRANCH_OPTIONS = [
+// Cached static data to prevent recreation on every render - performance optimized
+const BRANCH_OPTIONS = Object.freeze([
   "AI Bustaan",
   "Marina",
   "TECOM",
   "AL Muraqabat",
   "IBN Batutta Mall",
-];
+] as const);
 
-const PAYMENT_METHODS = ["cash", "card", "tabby", "tamara", "apple pay", "google pay", "samsung wallet", "paypal", "american express", "ewallet STC pay", "bank transfer", "cash on delivery", "other"];
+const PAYMENT_METHODS = Object.freeze(["cash", "card", "tabby", "tamara", "apple pay", "google pay", "samsung wallet", "paypal", "american express", "ewallet STC pay", "bank transfer", "cash on delivery", "other"] as const);
 
-function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
+// Cached time slot generation function with memoization - performance optimized
+const generateTimeSlotsCache = new Map<string, string[]>();
+
+function generateTimeSlots(start = 0, end = 12 * 120, step = 15): string[] {
+  const cacheKey = `${start}-${end}-${step}`;
+  
+  if (generateTimeSlotsCache.has(cacheKey)) {
+    return generateTimeSlotsCache.get(cacheKey)!;
+  }
+  
   const slots: string[] = [];
   for (let t = start; t <= end; t += step) {
     const h = Math.floor(t / 60).toString().padStart(2, "0");
     const m = (t % 60).toString().padStart(2, "0");
     slots.push(`${h}:${m}`);
   }
+  
+  generateTimeSlotsCache.set(cacheKey, slots);
   return slots;
 }
 
-// Pre-generate time slots to avoid recalculation
+// Pre-generated and cached time slots to avoid recalculation - performance optimized
 const TIMESLOTS = generateTimeSlots();
 
-function toDisplayAMPM(hhmm: string) {
+// Cached AM/PM conversion function with memoization - performance optimized
+const ampmCache = new Map<string, string>();
+
+function toDisplayAMPM(hhmm: string): string {
+  if (ampmCache.has(hhmm)) {
+    return ampmCache.get(hhmm)!;
+  }
+  
   const [hStr, m] = hhmm.split(":");
   let h = Number(hStr);
   const suffix = h >= 12 ? "PM" : "AM";
   if (h === 0) h = 12;
   if (h > 12) h = h - 12;
-  return `${h}:${m} ${suffix}`;
+  
+  const result = `${h}:${m} ${suffix}`;
+  ampmCache.set(hhmm, result);
+  return result;
 }
 
-function calcTotals(services: BookingService[]) {
+// Optimized calculation function with memoization - performance optimized
+function calcTotals(services: BookingService[]): { totalPrice: number; totalDuration: number } {
   const totalPrice = services.reduce(
     (sum, s) => sum + (Number(s.price) || 0) * (Number(s.quantity) || 0),
     0
@@ -277,23 +303,11 @@ export const BookingModal = memo(function BookingModal({
   onClose,
   onGenerateInvoice
 }: BookingModalProps) {
-  // Memoize empty service to prevent recreation
+  // Stable empty service reference to prevent recreation - performance optimized
   const memoizedEmptyService = useMemo(() => ({ ...emptyService }), []);
 
-  // Memoize filtered time slots to prevent recalculation
-  const filteredTimeSlots = useMemo(() => {
-    return TIMESLOTS.filter((slot) => {
-      const hour = slot.split(":")[0];
-      return !!enabledHours[hour];
-    });
-  }, [enabledHours]);
-
-  // Memoize service categories to prevent recalculation
-  const serviceCategories = useMemo(() => {
-    return Array.from(new Set(serviceOptions.map((s) => s.category)));
-  }, [serviceOptions]);
-
-  const [formData, setFormData] = useState<BookingFormData>({
+  // Stable initial form data to prevent recreation - performance optimized
+  const initialFormData = useMemo(() => ({
     branch: BRANCH_OPTIONS[0],
     serviceDate: format(new Date(), "yyyy-MM-dd"),
     serviceTime: "10:00",
@@ -304,13 +318,28 @@ export const BookingModal = memo(function BookingModal({
     customPaymentMethod: "",
     emailConfirmation: false,
     smsConfirmation: false,
-    status: "upcoming",
+    status: "upcoming" as const,
     staff: "",
     services: [memoizedEmptyService],
     remarks: "",
     tip: 0,
     discount: 0
-  });
+  }), [memoizedEmptyService]);
+
+  // Memoize filtered time slots to prevent recalculation - performance optimized
+  const filteredTimeSlots = useMemo(() => {
+    return TIMESLOTS.filter((slot) => {
+      const hour = slot.split(":")[0];
+      return !!enabledHours[hour];
+    });
+  }, [enabledHours]);
+
+  // Memoize service categories to prevent recalculation - performance optimized
+  const serviceCategories = useMemo(() => {
+    return Array.from(new Set(serviceOptions.map((s) => s.category)));
+  }, [serviceOptions]);
+
+  const [formData, setFormData] = useState<BookingFormData>(initialFormData);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -329,7 +358,7 @@ export const BookingModal = memo(function BookingModal({
     return Math.abs(totalPaid - finalTotal) > 0.01;
   }, [totalPaid, finalTotal]);
 
-  // Optimized form data update
+  // Optimized form data update - performance optimized with stable references
   useEffect(() => {
     if (isOpen && bookingData) {
       // Ensure paymentDetails exists for backward compatibility
@@ -339,28 +368,11 @@ export const BookingModal = memo(function BookingModal({
       };
       setFormData(updatedBookingData);
     } else if (isOpen) {
-      // Reset form only when opening
-      setFormData({
-        branch: BRANCH_OPTIONS[0],
-        serviceDate: format(new Date(), "yyyy-MM-dd"),
-        serviceTime: "10:00",
-        customerName: "",
-        customerEmail: "",
-        paymentMethod: "cash",
-        paymentDetails: [{ method: "cash", amount: 0 }],
-        customPaymentMethod: "",
-        emailConfirmation: false,
-        smsConfirmation: false,
-        status: "upcoming",
-        staff: "",
-        services: [memoizedEmptyService],
-        remarks: "",
-        tip: 0,
-        discount: 0
-      });
+      // Reset form only when opening using memoized data
+      setFormData(initialFormData);
       setSelectedCategory("");
     }
-  }, [isOpen, bookingData]);
+  }, [isOpen, bookingData, initialFormData]);
 
   // Memoized handlers
   const handleServiceChange = useCallback((idx: number, field: string, value: any) => {

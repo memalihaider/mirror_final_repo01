@@ -1,10 +1,11 @@
 import { Calendar, Plus } from "lucide-react";
+import { memo } from "react";
 
 interface BookingsHeaderProps {
   onAddBooking: () => void;
 }
 
-export function BookingsHeader({ onAddBooking }: BookingsHeaderProps) {
+export const BookingsHeader = memo(function BookingsHeader({ onAddBooking }: BookingsHeaderProps) {
   return (
     <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-blue-600 animate-gradient-x">
       <div className="absolute inset-0 bg-black/20"></div>
@@ -64,4 +65,4 @@ export function BookingsHeader({ onAddBooking }: BookingsHeaderProps) {
       <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-white/5 rounded-full animate-bounce-subtle"></div>
     </div>
   );
-}
+});

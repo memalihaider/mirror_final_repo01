@@ -84,7 +84,7 @@ const FilterInput = memo(({
 
 FilterInput.displayName = 'FilterInput';
 
-export function BookingsFilterBar({ branches, staff, uniqueTimes, onFiltersChange }: FilterBarProps) {
+export const BookingsFilterBar = memo(function BookingsFilterBar({ branches, staff, uniqueTimes, onFiltersChange }: FilterBarProps) {
   const [filters, setFilters] = useState({
     branch: "",
     staff: "",
@@ -218,4 +218,4 @@ export function BookingsFilterBar({ branches, staff, uniqueTimes, onFiltersChang
       )}
     </div>
   );
-}
+});

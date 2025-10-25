@@ -1,6 +1,6 @@
 import { Calendar, CheckCircle, AlertCircle, XCircle, Clock } from "lucide-react";
 import { Booking } from '@/types/booking';
-import { useMemo, useCallback, memo } from "react";
+import React, { useState, useMemo, memo, useCallback } from 'react';
 
 interface ScheduleDashboardProps {
   bookings: Booking[];
@@ -8,30 +8,45 @@ interface ScheduleDashboardProps {
   onHoursChange: (hours: Record<string, boolean>) => void;
 }
 
-// Helper functions first
-function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
-  const slots: string[] = [];
-  for (let t = start; t <= end; t += step) {
-    const h = Math.floor(t / 60).toString().padStart(2, "0");
-    const m = (t % 60).toString().padStart(2, "0");
-    slots.push(`${h}:${m}`);
-  }
-  return slots;
-}
+// Helper functions first - memoized and optimized
+const generateTimeSlots = (() => {
+  const cache = new Map();
+  return (start = 0, end = 12 * 120, step = 15) => {
+    const key = `${start}-${end}-${step}`;
+    if (cache.has(key)) return cache.get(key);
+    
+    const slots: string[] = [];
+    for (let t = start; t <= end; t += step) {
+      const h = Math.floor(t / 60).toString().padStart(2, "0");
+      const m = (t % 60).toString().padStart(2, "0");
+      slots.push(`${h}:${m}`);
+    }
+    cache.set(key, slots);
+    return slots;
+  };
+})();
 
-// Memoize the AM/PM conversion function
-const toDisplayAMPM = (hhmm: string) => {
-  const [hStr, m] = hhmm.split(":");
-  let h = Number(hStr);
-  const suffix = h >= 12 ? "PM" : "AM";
-  if (h === 0) h = 12;
-  if (h > 12) h = h - 12;
-  return `${h}:${m} ${suffix}`;
-};
+// Memoize the AM/PM conversion function with caching
+const toDisplayAMPM = (() => {
+  const cache = new Map();
+  return (hhmm: string) => {
+    if (cache.has(hhmm)) return cache.get(hhmm);
+    
+    const [hStr, m] = hhmm.split(":");
+    let h = Number(hStr);
+    const suffix = h >= 12 ? "PM" : "AM";
+    if (h === 0) h = 12;
+    if (h > 12) h = h - 12;
+    const result = `${h}:${m} ${suffix}`;
+    cache.set(hhmm, result);
+    return result;
+  };
+})();
 
-// Memoize static data outside component
+// Memoize static data outside component - pre-calculated with proper typing
 const TIME_SLOTS = generateTimeSlots();
-const UNIQUE_HOURS = Array.from(new Set(TIME_SLOTS.map((t) => t.split(":")[0]))).sort((a, b) => Number(a) - Number(b));
+const UNIQUE_HOURS = Array.from(new Set(TIME_SLOTS.map((t: string) => t.split(":")[0]))).sort((a, b) => Number(a) - Number(b)) as string[];
+const UNIQUE_HOURS_LENGTH = UNIQUE_HOURS.length;
 
 // Color configuration outside component to prevent recreation
 const COLOR_CONFIG = {
@@ -61,8 +76,15 @@ const COLOR_CONFIG = {
   }
 };
 
-// Memoized stat card component to prevent unnecessary re-renders
-const CompactStatCard = memo(({ title, value, icon: Icon, color }: any) => {
+// Memoized stat card component to prevent unnecessary re-renders - optimized with proper typing
+interface CompactStatCardProps {
+  title: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  color: 'blue' | 'green' | 'amber' | 'red';
+}
+
+const CompactStatCard = memo(({ title, value, icon: Icon, color }: CompactStatCardProps) => {
   const config = COLOR_CONFIG[color];
 
   return (
@@ -136,7 +158,7 @@ const CompactHourToggle = memo(({ hour, enabled, onChange }: any) => {
 
 CompactHourToggle.displayName = 'CompactHourToggle';
 
-export function ScheduleDashboard({ bookings, enabledHours, onHoursChange }: ScheduleDashboardProps) {
+export const ScheduleDashboard = memo(function ScheduleDashboard({ bookings, enabledHours, onHoursChange }: ScheduleDashboardProps) {
   // Memoized stats calculation
   const stats = useMemo(() => {
     let total = bookings.length;
@@ -314,4 +336,4 @@ export function ScheduleDashboard({ bookings, enabledHours, onHoursChange }: Sch
       </div>
     </div>
   );
-}
+});

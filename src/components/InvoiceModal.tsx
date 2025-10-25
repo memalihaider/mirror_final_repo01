@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,7 +37,7 @@ interface InvoiceFormData {
   footerText: string;
 }
 
-export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps) {
+export const InvoiceModal = memo(function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<InvoiceFormData>({
     title: "Invoice Receipt",
@@ -456,4 +456,4 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
       </div>
     </div>
   );
-}
+});
