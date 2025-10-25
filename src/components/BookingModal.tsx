@@ -1,35 +1,68 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { XCircle, Trash2, Plus } from "lucide-react";
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { Booking, BookingService, BookingFormData } from '@/types/booking';
+import { Booking, BookingService, BookingFormData, PaymentDetail } from '@/types/booking';
 
 // Memoized components to prevent unnecessary re-renders
-const ServiceRow = memo(({ service, index, serviceOptions, selectedCategory, onChange, onRemove, showRemove }: any) => {
+interface ServiceRowProps {
+  service: BookingService;
+  index: number;
+  serviceOptions: any[];
+  selectedCategory: string;
+  staffOptions: string[];
+  onChange: (index: number, field: string, value: any) => void;
+  onRemove: (index: number) => void;
+  showRemove: boolean;
+}
+
+const ServiceRow = memo(({ service, index, serviceOptions, selectedCategory, staffOptions, onChange, onRemove, showRemove }: ServiceRowProps) => {
   const handleChange = useCallback((field: string, value: any) => {
     onChange(index, field, value);
   }, [index, onChange]);
 
+  const handleRemoveClick = useCallback(() => {
+    onRemove(index);
+  }, [index, onRemove]);
+
+  // Memoize filtered service options to prevent recalculation on every render
+  const filteredServiceOptions = useMemo(() => {
+    return serviceOptions.filter((serviceOption: any) =>
+      selectedCategory ? serviceOption.category === selectedCategory : true
+    );
+  }, [serviceOptions, selectedCategory]);
+
+  // Memoize staff options to prevent recreation
+  const memoizedStaffOptions = useMemo(() => staffOptions, [staffOptions]);
+
   return (
     <div className="grid grid-cols-12 gap-2 px-4 py-3 border-t">
-      <div className="col-span-4">
+      <div className="col-span-3">
         <select
           className="w-full border rounded-md px-3 py-2"
           value={service.serviceName}
           onChange={(e) => handleChange("serviceName", e.target.value)}
         >
           <option value="">Select a service</option>
-          {serviceOptions
-            .filter((serviceOption: any) =>
-              selectedCategory
-                ? serviceOption.category === selectedCategory
-                : true
-            )
-            .map((serviceOption: any) => (
-              <option key={serviceOption.id} value={serviceOption.name}>
-                {serviceOption.name}
-              </option>
-            ))}
+          {filteredServiceOptions.map((serviceOption: any) => (
+            <option key={serviceOption.id} value={serviceOption.name}>
+              {serviceOption.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="col-span-2">
+        <select
+          className="w-full border rounded-md px-3 py-2"
+          value={service.staffMember || ""}
+          onChange={(e) => handleChange("staffMember", e.target.value)}
+        >
+          <option value="">Select staff</option>
+          {memoizedStaffOptions.map((staff: string) => (
+            <option key={staff} value={staff}>
+              {staff}
+            </option>
+          ))}
         </select>
       </div>
       <div className="col-span-2">
@@ -63,7 +96,7 @@ const ServiceRow = memo(({ service, index, serviceOptions, selectedCategory, onC
       <div className="col-span-1 flex justify-end items-center">
         {showRemove && (
           <button
-            onClick={() => onRemove(index)}
+            onClick={handleRemoveClick}
             className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors"
             title="Remove"
           >
@@ -76,6 +109,90 @@ const ServiceRow = memo(({ service, index, serviceOptions, selectedCategory, onC
 });
 
 ServiceRow.displayName = 'ServiceRow';
+
+// Memoized PaymentDetailRow component
+interface PaymentDetailRowProps {
+  payment: PaymentDetail;
+  index: number;
+  paymentMethods: any[];
+  onChange: (index: number, field: string, value: any) => void;
+  onRemove: (index: number) => void;
+  showRemove: boolean;
+}
+
+const PaymentDetailRow = memo(({ payment, index, paymentMethods, onChange, onRemove, showRemove }: PaymentDetailRowProps) => {
+  const handleChange = useCallback((field: string, value: any) => {
+    onChange(index, field, value);
+  }, [index, onChange]);
+
+  const handleRemoveClick = useCallback(() => {
+    onRemove(index);
+  }, [index, onRemove]);
+
+  // Memoize default payment methods to prevent recreation
+  const defaultPaymentMethods = useMemo(() => [
+    "cash", "card", "tabby", "tamara", "apple pay", "google pay", 
+    "samsung wallet", "paypal", "american express", "ewallet STC pay", 
+    "bank transfer", "cash on delivery", "other"
+  ], []);
+
+  // Memoize payment method options
+  const paymentMethodOptions = useMemo(() => {
+    return paymentMethods.length > 0 ? paymentMethods : defaultPaymentMethods;
+  }, [paymentMethods, defaultPaymentMethods]);
+
+  return (
+    <div className="grid grid-cols-12 gap-2 px-4 py-3 border-t">
+      <div className="col-span-6">
+        <select
+          className="w-full border rounded-md px-3 py-2"
+          value={payment.method}
+          onChange={(e) => handleChange("method", e.target.value)}
+        >
+          <option value="">Select payment method</option>
+          {paymentMethods.length > 0
+            ? paymentMethods.map((method: any) => (
+                <option
+                  key={method.id}
+                  value={method.name || method.method || method.title || ""}
+                >
+                  {(method.name || method.method || method.title || "").toUpperCase()}
+                </option>
+              ))
+            : defaultPaymentMethods.map((p) => (
+                <option key={p} value={p}>
+                  {p.toUpperCase()}
+                </option>
+              ))}
+        </select>
+      </div>
+      <div className="col-span-4">
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          className="w-full border rounded-md px-3 py-2"
+          placeholder="Amount (AED)"
+          value={payment.amount}
+          onChange={(e) => handleChange("amount", Number(e.target.value || 0))}
+        />
+      </div>
+      <div className="col-span-2 flex justify-end items-center">
+        {showRemove && (
+          <button
+            onClick={handleRemoveClick}
+            className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors"
+            title="Remove payment method"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+PaymentDetailRow.displayName = 'PaymentDetailRow';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -99,6 +216,7 @@ const emptyService: BookingService = {
   duration: 30,
   price: 0,
   quantity: 1,
+  staffMember: "",
 };
 
 const BRANCH_OPTIONS = [
@@ -111,8 +229,6 @@ const BRANCH_OPTIONS = [
 
 const PAYMENT_METHODS = ["cash", "card", "tabby", "tamara", "apple pay", "google pay", "samsung wallet", "paypal", "american express", "ewallet STC pay", "bank transfer", "cash on delivery", "other"];
 
-const TIMESLOTS = generateTimeSlots();
-
 function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
   const slots: string[] = [];
   for (let t = start; t <= end; t += step) {
@@ -122,6 +238,9 @@ function generateTimeSlots(start = 0, end = 12 * 120, step = 15) {
   }
   return slots;
 }
+
+// Pre-generate time slots to avoid recalculation
+const TIMESLOTS = generateTimeSlots();
 
 function toDisplayAMPM(hhmm: string) {
   const [hStr, m] = hhmm.split(":");
@@ -144,7 +263,7 @@ function calcTotals(services: BookingService[]) {
   return { totalPrice, totalDuration };
 }
 
-export function BookingModal({
+export const BookingModal = memo(function BookingModal({
   isOpen,
   isEditing,
   editingId,
@@ -158,6 +277,22 @@ export function BookingModal({
   onClose,
   onGenerateInvoice
 }: BookingModalProps) {
+  // Memoize empty service to prevent recreation
+  const memoizedEmptyService = useMemo(() => ({ ...emptyService }), []);
+
+  // Memoize filtered time slots to prevent recalculation
+  const filteredTimeSlots = useMemo(() => {
+    return TIMESLOTS.filter((slot) => {
+      const hour = slot.split(":")[0];
+      return !!enabledHours[hour];
+    });
+  }, [enabledHours]);
+
+  // Memoize service categories to prevent recalculation
+  const serviceCategories = useMemo(() => {
+    return Array.from(new Set(serviceOptions.map((s) => s.category)));
+  }, [serviceOptions]);
+
   const [formData, setFormData] = useState<BookingFormData>({
     branch: BRANCH_OPTIONS[0],
     serviceDate: format(new Date(), "yyyy-MM-dd"),
@@ -165,12 +300,13 @@ export function BookingModal({
     customerName: "",
     customerEmail: "",
     paymentMethod: "cash",
+    paymentDetails: [{ method: "cash", amount: 0 }],
     customPaymentMethod: "",
     emailConfirmation: false,
     smsConfirmation: false,
     status: "upcoming",
     staff: "",
-    services: [{ ...emptyService }],
+    services: [memoizedEmptyService],
     remarks: "",
     tip: 0,
     discount: 0
@@ -179,10 +315,29 @@ export function BookingModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Memoized calculations - moved here to be available for validation
+  const totals = useMemo(() => calcTotals(formData.services), [formData.services]);
+  const finalTotal = useMemo(() => totals.totalPrice + (formData.tip || 0) - (formData.discount || 0), [totals.totalPrice, formData.tip, formData.discount]);
+
+  // Memoized payment total calculation
+  const totalPaid = useMemo(() => {
+    return formData.paymentDetails.reduce((sum, p) => sum + (p.amount || 0), 0);
+  }, [formData.paymentDetails]);
+
+  // Memoized payment mismatch check
+  const paymentMismatch = useMemo(() => {
+    return Math.abs(totalPaid - finalTotal) > 0.01;
+  }, [totalPaid, finalTotal]);
+
   // Optimized form data update
   useEffect(() => {
     if (isOpen && bookingData) {
-      setFormData(bookingData);
+      // Ensure paymentDetails exists for backward compatibility
+      const updatedBookingData = {
+        ...bookingData,
+        paymentDetails: bookingData.paymentDetails || [{ method: bookingData.paymentMethod || "cash", amount: 0 }]
+      };
+      setFormData(updatedBookingData);
     } else if (isOpen) {
       // Reset form only when opening
       setFormData({
@@ -192,12 +347,13 @@ export function BookingModal({
         customerName: "",
         customerEmail: "",
         paymentMethod: "cash",
+        paymentDetails: [{ method: "cash", amount: 0 }],
         customPaymentMethod: "",
         emailConfirmation: false,
         smsConfirmation: false,
         status: "upcoming",
         staff: "",
-        services: [{ ...emptyService }],
+        services: [memoizedEmptyService],
         remarks: "",
         tip: 0,
         discount: 0
@@ -251,6 +407,31 @@ export function BookingModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  // Payment details handlers
+  const handlePaymentDetailChange = useCallback((idx: number, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentDetails: prev.paymentDetails.map((p, i) => {
+        if (i !== idx) return p;
+        return { ...p, [field]: value };
+      })
+    }));
+  }, []);
+
+  const handleAddPaymentDetail = useCallback(() => {
+    setFormData(prev => ({
+      ...prev,
+      paymentDetails: [...prev.paymentDetails, { method: "", amount: 0 }]
+    }));
+  }, []);
+
+  const handleRemovePaymentDetail = useCallback((index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentDetails: prev.paymentDetails.filter((_, i) => i !== index)
+    }));
+  }, []);
+
   const validateForm = useCallback(() => {
     if (!formData.customerName.trim()) return "Customer name is required";
     if (!formData.serviceDate) return "Service date is required";
@@ -262,8 +443,19 @@ export function BookingModal({
     if (!hasName) return "Each service must have a name";
     const selectedHour = formData.serviceTime.split(":")[0];
     if (!enabledHours[selectedHour]) return "Selected time falls into a disabled hour";
+    
+    // Validate payment details
+    if (formData.paymentDetails.length === 0) return "Add at least one payment method";
+    const hasValidPayments = formData.paymentDetails.every((p) => p.method.trim().length > 0 && p.amount > 0);
+    if (!hasValidPayments) return "Each payment method must have a valid method and amount";
+    
+    // Check if total payment amount matches the final total using memoized values
+    if (paymentMismatch) {
+      return `Total payment amount (${totalPaid.toFixed(2)}) must equal the final total (${finalTotal.toFixed(2)})`;
+    }
+    
     return null;
-  }, [formData, enabledHours]);
+  }, [formData, enabledHours, paymentMismatch, totalPaid, finalTotal]);
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
@@ -275,7 +467,12 @@ export function BookingModal({
 
     try {
       setSaving(true);
-      await onSave(formData, editingId || undefined);
+      // Update paymentMethod for backward compatibility
+      const dataToSave = {
+        ...formData,
+        paymentMethod: formData.paymentDetails.map(p => p.method).join(", ")
+      };
+      await onSave(dataToSave, editingId || undefined);
       // Close immediately without waiting for state updates
       onClose();
     } catch (error) {
@@ -307,12 +504,6 @@ export function BookingModal({
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
-
-  // Memoized calculations
-  const formTotals = useCallback(() => calcTotals(formData.services), [formData.services]);
-
-  const totals = formTotals();
-  const finalTotal = totals.totalPrice + (formData.tip || 0) - (formData.discount || 0);
 
   // Early return if not open
   if (!isOpen) return null;
@@ -394,13 +585,11 @@ export function BookingModal({
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
                   <option value="">Select One</option>
-                  {Array.from(new Set(serviceOptions.map((s) => s.category))).map(
-                    (c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    )
-                  )}
+                  {serviceCategories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -421,56 +610,8 @@ export function BookingModal({
                   ))}
                 </select>
               </div>
-
-              {/* Payment Method */}
-              
-<div>
-              <label className="block text-sm font-medium text-gray-700">
-                Payment Method
-              </label>
-              <select
-                multiple
-                className="mt-1 w-full border rounded-md px-3 py-2"
-                value={formData.paymentMethod}
-                onChange={(e) => {
-                  const selected = Array.from(
-                    e.target.selectedOptions,
-                    (option) => option.value
-                  );
-                  handleInputChange("paymentMethod", selected);
-                }}
-              >
-                {paymentMethods.length > 0
-                  ? paymentMethods.map((method: any) => (
-                      <option
-                        key={method.id}
-                        value={method.name || method.method || method.title || ""}
-                      >
-                        {(method.name || method.method || method.title || "").toUpperCase()}
-                      </option>
-                    ))
-                  : PAYMENT_METHODS.map((p) => (
-                      <option key={p} value={p}>
-                        {p.toUpperCase()}
-                      </option>
-                    ))}
-                <option value="custom">Custom</option>
-              </select>
-              {formData.paymentMethod.includes("custom") && (
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    placeholder="Enter custom payment method"
-                    value={formData.customPaymentMethod}
-                    onChange={(e) =>
-                      handleInputChange("customPaymentMethod", e.target.value)
-                    }
-                  />
-                </div>
-              )}
             </div>
-</div>
+
             {/* Date & Time */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -493,10 +634,7 @@ export function BookingModal({
                   value={formData.serviceTime}
                   onChange={(e) => handleInputChange('serviceTime', e.target.value)}
                 >
-                  {TIMESLOTS.filter((slot) => {
-                    const hour = slot.split(":")[0];
-                    return !!enabledHours[hour];
-                  }).map((slot) => (
+                  {filteredTimeSlots.map((slot) => (
                     <option key={slot} value={slot}>
                       {toDisplayAMPM(slot)}
                     </option>
@@ -520,7 +658,8 @@ export function BookingModal({
             {/* Services table */}
             <div className="border rounded-lg">
               <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
-                <div className="col-span-4">Service</div>
+                <div className="col-span-3">Service</div>
+                <div className="col-span-2">Staff Member</div>
                 <div className="col-span-2">Duration (min)</div>
                 <div className="col-span-2">Price</div>
                 <div className="col-span-1">Qty</div>
@@ -534,6 +673,7 @@ export function BookingModal({
                   index={idx}
                   serviceOptions={serviceOptions}
                   selectedCategory={selectedCategory}
+                  staffOptions={staffOptions}
                   onChange={handleServiceChange}
                   onRemove={handleRemoveServiceRow}
                   showRemove={formData.services.length > 1}
@@ -589,6 +729,52 @@ export function BookingModal({
             >
               <Plus className="w-4 h-4" />
               Add Service
+            </button>
+
+            {/* Payment Details Section */}
+            <div className="border rounded-lg">
+              <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
+                <div className="col-span-6">Payment Method</div>
+                <div className="col-span-4">Amount (AED)</div>
+                <div className="col-span-2 text-right">—</div>
+              </div>
+
+              {formData.paymentDetails.map((payment, idx) => (
+                <PaymentDetailRow
+                  key={idx}
+                  payment={payment}
+                  index={idx}
+                  paymentMethods={paymentMethods}
+                  onChange={handlePaymentDetailChange}
+                  onRemove={handleRemovePaymentDetail}
+                  showRemove={formData.paymentDetails.length > 1}
+                />
+              ))}
+
+              {/* Payment Summary */}
+              <div className="px-4 py-3 border-t bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">
+                    Total Payments: AED {totalPaid.toFixed(2)}
+                  </span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Expected: AED {finalTotal.toFixed(2)}
+                  </span>
+                </div>
+                {paymentMismatch && (
+                  <div className="text-sm text-red-600 mt-1">
+                    ⚠️ Payment total does not match expected amount
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddPaymentDetail}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:text-green-800 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Payment Method
             </button>
 
             {/* Remarks & toggles */}
@@ -649,4 +835,4 @@ export function BookingModal({
       </div>
     </div>
   );
-}
+});

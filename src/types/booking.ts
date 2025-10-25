@@ -5,9 +5,15 @@ export interface BookingService {
   duration: number;
   price: number;
   quantity: number;
+  staffMember?: string; // Staff assigned to this specific service
 }
 
 export type BookingStatus = "upcoming" | "past" | "cancelled";
+
+export interface PaymentDetail {
+  method: string;
+  amount: number;
+}
 
 export interface Booking {
   id: string;
@@ -21,7 +27,8 @@ export interface Booking {
   totalPrice: number;
   totalDuration: number;
   status: BookingStatus;
-  paymentMethod: string;
+  paymentMethod: string; // Keep for backward compatibility
+  paymentDetails?: PaymentDetail[]; // New field for multiple payments
   emailConfirmation: boolean;
   smsConfirmation: boolean;
   createdAt: Date;
@@ -38,7 +45,8 @@ export interface BookingFormData {
   serviceTime: string;
   customerName: string;
   customerEmail: string;
-  paymentMethod: string;
+  paymentMethod: string; // Keep for backward compatibility
+  paymentDetails: PaymentDetail[]; // New field for multiple payments
   customPaymentMethod: string;
   emailConfirmation: boolean;
   smsConfirmation: boolean;

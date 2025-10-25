@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import AccessWrapper from "@/components/AccessWrapper";
 import { ClientOnly } from '@/components/ClientOnly';
 // import { BookingsFilterBar } from '@/components/BookingsFilterBar';
@@ -37,7 +37,17 @@ const TIME_SLOTS = generateTimeSlots();
 const UNIQUE_HOURS = Array.from(new Set(TIME_SLOTS.map((t) => t.split(":")[0]))).sort((a, b) => Number(a) - Number(b));
 const INITIAL_ENABLED_HOURS = Object.fromEntries(UNIQUE_HOURS.map(h => [h, true]));
 
-export default function BookingsPage() {
+// Memoized empty service template to prevent recreation
+const EMPTY_SERVICE_TEMPLATE = {
+  serviceId: "",
+  serviceName: "",
+  category: "",
+  duration: 30,
+  price: 0,
+  quantity: 1
+} as const;
+
+function BookingsPage() {
   // Hooks for data management
   const { bookings, loading, saveBooking, deleteBooking } = useBookings();
   const { staff, branches, services, paymentMethods, loading: resourcesLoading } = useResources();
@@ -103,28 +113,28 @@ export default function BookingsPage() {
   const filteredBookings = useMemo(() => {
     if (!bookings.length) return [];
     
+    // Pre-calculate filter conditions to avoid repeated operations
     const searchTermLower = searchTerm.toLowerCase();
     const hasSearchTerm = searchTerm.length > 0;
+    const hasFilters = Object.values(filters).some(Boolean);
+    const isStatusAll = statusFilter === "all";
+    
+    // Early return if no filters applied
+    if (!hasSearchTerm && !hasFilters && isStatusAll) {
+      return bookings;
+    }
+
+    // Cache filter values to avoid repeated property access
     const filtersBranch = filters.branch;
     const filtersStaff = filters.staff;
     const filtersDate = filters.date;
     const filtersCustomer = filters.customer.toLowerCase();
     const filtersTime = filters.time;
-    const isStatusAll = statusFilter === "all";
 
     return bookings.filter((booking) => {
       // Early return for status filter (most selective first)
       if (!isStatusAll && booking.status !== statusFilter) return false;
       
-      // Search term filtering with early return
-      if (hasSearchTerm) {
-        const matchesSearch = 
-          booking.customerName.toLowerCase().includes(searchTermLower) ||
-          booking.branch.toLowerCase().includes(searchTermLower) ||
-          booking.services.some((s) => s.serviceName.toLowerCase().includes(searchTermLower));
-        if (!matchesSearch) return false;
-      }
-
       // Individual filters with early returns in order of selectivity
       if (filtersBranch && booking.branch !== filtersBranch) return false;
       if (filtersStaff && booking.staff !== filtersStaff) return false;
@@ -132,13 +142,26 @@ export default function BookingsPage() {
       if (filtersCustomer && !booking.customerName.toLowerCase().includes(filtersCustomer)) return false;
       if (filtersTime && booking.bookingTime !== filtersTime) return false;
 
+      // Search term filtering last (most expensive)
+      if (hasSearchTerm) {
+        const customerNameLower = booking.customerName.toLowerCase();
+        const branchLower = booking.branch.toLowerCase();
+        
+        return customerNameLower.includes(searchTermLower) ||
+               branchLower.includes(searchTermLower) ||
+               booking.services.some((s) => s.serviceName.toLowerCase().includes(searchTermLower));
+      }
+
       return true;
     });
   }, [bookings, searchTerm, statusFilter, filters]);
 
-  // Memoized unique times with Set optimization
+  // Memoized unique times with Set optimization and early return
   const uniqueTimes = useMemo(() => {
+    if (!bookings.length) return [];
+    
     const timeSet = new Set<string>();
+    // Use for loop for better performance with large arrays
     for (let i = 0; i < bookings.length; i++) {
       const time = bookings[i].bookingTime;
       if (time) timeSet.add(time);
@@ -146,11 +169,16 @@ export default function BookingsPage() {
     return Array.from(timeSet).sort();
   }, [bookings]);
 
-  // Memoized branches data
+  // Memoized branches data with stable reference
   const memoizedBranches = useMemo(() => 
     branches.length ? branches : BRANCH_OPTIONS,
     [branches]
   );
+
+  // Memoized staff and services for stable references
+  const memoizedStaff = useMemo(() => staff, [staff]);
+  const memoizedServices = useMemo(() => services, [services]);
+  const memoizedPaymentMethods = useMemo(() => paymentMethods, [paymentMethods]);
 
   // Stable callback handlers with proper dependencies
   const handleOpenCreate = useCallback(() => {
@@ -171,19 +199,13 @@ export default function BookingsPage() {
       customerName: "",
       customerEmail: "",
       paymentMethod: "cash",
+      paymentDetails: [{ method: "cash", amount: 0 }],
       customPaymentMethod: "",
       emailConfirmation: false,
       smsConfirmation: false,
       status: "upcoming",
       staff: prefillStaff,
-      services: [{
-        serviceId: "",
-        serviceName: "",
-        category: "",
-        duration: 30,
-        price: 0,
-        quantity: 1
-      }],
+      services: [EMPTY_SERVICE_TEMPLATE],
       remarks: "",
       tip: 0,
       discount: 0
@@ -200,6 +222,7 @@ export default function BookingsPage() {
       customerName: booking.customerName || "",
       customerEmail: booking.customerEmail || "",
       paymentMethod: booking.paymentMethod || "cash",
+      paymentDetails: (booking as any).paymentDetails || [{ method: booking.paymentMethod || "cash", amount: booking.totalPrice || 0 }],
       customPaymentMethod: "",
       emailConfirmation: !!booking.emailConfirmation,
       smsConfirmation: !!booking.smsConfirmation,
@@ -213,15 +236,9 @@ export default function BookingsPage() {
             duration: Number(s.duration) || 0,
             price: Number(s.price) || 0,
             quantity: Number(s.quantity) || 1,
+            staffMember: (s as any).staffMember || "",
           }))
-        : [{
-            serviceId: "",
-            serviceName: "",
-            category: "",
-            duration: 30,
-            price: 0,
-            quantity: 1
-          }],
+        : [{ ...EMPTY_SERVICE_TEMPLATE, staffMember: "" }],
       remarks: booking.remarks || "",
       tip: booking.tipAmount || 0,
       discount: booking.discount || 0
@@ -344,7 +361,7 @@ export default function BookingsPage() {
 
           <ScheduleBoard
             bookings={filteredBookings}
-            staffOptions={staff}
+            staffOptions={memoizedStaff}
             scheduleDate={scheduleDate}
             scheduleBranch={scheduleBranch}
             enabledHours={enabledHours}
@@ -371,9 +388,9 @@ export default function BookingsPage() {
             isEditing={!!editingId}
             editingId={editingId}
             bookingData={bookingFormData}
-            staffOptions={staff}
-            serviceOptions={services}
-            paymentMethods={paymentMethods}
+            staffOptions={memoizedStaff}
+            serviceOptions={memoizedServices}
+            paymentMethods={memoizedPaymentMethods}
             enabledHours={enabledHours}
             onSave={handleSaveBooking}
             onDelete={handleDeleteBooking}
@@ -391,3 +408,6 @@ export default function BookingsPage() {
     </AccessWrapper>
   );
 }
+
+// Export memoized component for better performance
+export default memo(BookingsPage);

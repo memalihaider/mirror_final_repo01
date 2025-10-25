@@ -7,6 +7,7 @@ import Navbar from './Navbar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import GlobalChatNotifier from './GlobalChatNotifier';
+import NotificationDebugger from './NotificationDebugger';
 
 export default function ClientLayout({
   children,
@@ -71,6 +72,7 @@ export default function ClientLayout({
       ) : (
         <ProtectedRoute>
           <GlobalChatNotifier />
+          <NotificationDebugger />
           <div className="min-h-screen bg-white">
             {/* Mobile overlay */}
             {isMobile && sidebarOpen && (

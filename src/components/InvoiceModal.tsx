@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Booking } from "@/types/booking";
+import { Booking, PaymentDetail } from "@/types/booking";
 import { X } from "lucide-react";
 
 interface InvoiceModalProps {
@@ -28,7 +28,8 @@ interface InvoiceFormData {
   bookingDate: string;
   bookingTime: string;
   staff: string;
-  paymentMethod: string;
+  paymentMethod: string; // Keep for backward compatibility
+  paymentDetails: PaymentDetail[]; // Multiple payment methods
   services: any[];
   totalPrice: number;
   tip: number;
@@ -52,6 +53,7 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
     bookingTime: "",
     staff: "",
     paymentMethod: "",
+    paymentDetails: [],
     services: [],
     totalPrice: 0,
     tip: 0,
@@ -84,6 +86,7 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
         bookingTime: invoiceData.bookingTime || "",
         staff: invoiceData.staff || "",
         paymentMethod: invoiceData.paymentMethod || "cash",
+        paymentDetails: invoiceData.paymentDetails || [{ method: invoiceData.paymentMethod || "cash", amount: invoiceData.totalPrice || 0 }],
         services: invoiceData.services || [],
         totalPrice: invoiceData.totalPrice || 0,
         tip: invoiceData.tipAmount || 0,
@@ -104,6 +107,10 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
 
   const saveInvoiceToFirebase = async (invoiceData: any) => {
     try {
+      if (!db) {
+        console.error("❌ Firebase not initialized");
+        return;
+      }
       const userId = invoiceData.userId || uuidv4();
       await addDoc(collection(db, "invoices"), {
         ...invoiceData,
@@ -269,7 +276,6 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
               "bookingDate",
               "bookingTime",
               "staff",
-              "paymentMethod",
             ].map((field) => (
               <div key={field}>
                 <p>
@@ -288,12 +294,26 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
             ))}
           </div>
 
+          {/* PAYMENT DETAILS */}
+          <div className="mb-4 text-sm">
+            <h4 className="font-semibold mb-2">Payment Details:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {formData.paymentDetails.map((payment, index) => (
+                <div key={index} className="flex justify-between border-b pb-1">
+                  <span>{payment.method.toUpperCase()}:</span>
+                  <span>AED {payment.amount.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* SERVICES TABLE */}
           <div className="border rounded-lg mb-4 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
                   <th className="p-3 text-left">Service</th>
+                  <th className="p-3 text-left">Staff</th>
                   <th className="p-3 text-center">Qty</th>
                   <th className="p-3 text-right">Price</th>
                   <th className="p-3 text-right">Total</th>
@@ -315,6 +335,21 @@ export function InvoiceModal({ isOpen, invoiceData, onClose }: InvoiceModalProps
                         />
                       ) : (
                         s.serviceName
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {isEditing ? (
+                        <input
+                          value={s.staffMember || ""}
+                          onChange={(e) => {
+                            const newServices = [...formData.services];
+                            newServices[i].staffMember = e.target.value;
+                            handleFieldChange("services", newServices);
+                          }}
+                          className="border-b border-gray-300 focus:outline-none w-full"
+                        />
+                      ) : (
+                        s.staffMember || "N/A"
                       )}
                     </td>
                     <td className="p-3 text-center">

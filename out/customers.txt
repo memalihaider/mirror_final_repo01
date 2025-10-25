@@ -1,23 +1,69 @@
 1:"$Sreact.fragment"
-2:I[58323,["9135","static/chunks/7508b87c-1dd6dc389d7f1e63.js","7210","static/chunks/261b60bd-63276c496123da21.js","1748","static/chunks/1748-a7c4744e73cd4cfa.js","6061","static/chunks/6061-3b74460fecfb2b8c.js","9234","static/chunks/9234-9cb0dfa9df015ed7.js","8166","static/chunks/8166-ce0ec42f2a336910.js","9323","static/chunks/9323-ce7ff1d736b71dc0.js","7177","static/chunks/app/layout-46b8e3839c5996e7.js"],"default"]
+2:I[58323,["9135","static/chunks/7508b87c-1dd6dc389d7f1e63.js","7210","static/chunks/261b60bd-63276c496123da21.js","1748","static/chunks/1748-5d47ef150bd72a8a.js","6061","static/chunks/6061-3b74460fecfb2b8c.js","9234","static/chunks/9234-9cb0dfa9df015ed7.js","5528","static/chunks/5528-e2311d2dded789d9.js","9323","static/chunks/9323-dbda5fc5e4cd0c62.js","7177","static/chunks/app/layout-c96816c822a1388c.js"],"default"]
 3:I[87555,[],""]
 4:I[31295,[],""]
-5:I[90894,[],"ClientPageRoot"]
-6:I[5373,["9135","static/chunks/7508b87c-1dd6dc389d7f1e63.js","7210","static/chunks/261b60bd-63276c496123da21.js","3524","static/chunks/2170a4aa-5058233e9ea5fb68.js","1748","static/chunks/1748-a7c4744e73cd4cfa.js","6061","static/chunks/6061-3b74460fecfb2b8c.js","5228","static/chunks/5228-fd7f1567610741e9.js","9323","static/chunks/9323-ce7ff1d736b71dc0.js","931","static/chunks/931-fe76db1b1adacb7a.js","5812","static/chunks/app/customers/page-8144f5faf4b4e48b.js"],"default"]
-9:I[59665,[],"OutletBoundary"]
-b:I[74911,[],"AsyncMetadataOutlet"]
-d:I[59665,[],"ViewportBoundary"]
-f:I[59665,[],"MetadataBoundary"]
-10:"$Sreact.suspense"
-12:I[28393,[],""]
-:HL["/_next/static/css/7e7d96b1e6991756.css","style"]
-:HL["/_next/static/css/d77eed3c65f881ab.css","style"]
+5:I[99476,["9135","static/chunks/7508b87c-1dd6dc389d7f1e63.js","7210","static/chunks/261b60bd-63276c496123da21.js","1748","static/chunks/1748-5d47ef150bd72a8a.js","6061","static/chunks/6061-3b74460fecfb2b8c.js","9234","static/chunks/9234-9cb0dfa9df015ed7.js","5528","static/chunks/5528-e2311d2dded789d9.js","9323","static/chunks/9323-dbda5fc5e4cd0c62.js","7177","static/chunks/app/layout-c96816c822a1388c.js"],"default"]
+6:I[8022,["9135","static/chunks/7508b87c-1dd6dc389d7f1e63.js","7210","static/chunks/261b60bd-63276c496123da21.js","1748","static/chunks/1748-5d47ef150bd72a8a.js","6061","static/chunks/6061-3b74460fecfb2b8c.js","9234","static/chunks/9234-9cb0dfa9df015ed7.js","5528","static/chunks/5528-e2311d2dded789d9.js","9323","static/chunks/9323-dbda5fc5e4cd0c62.js","7177","static/chunks/app/layout-c96816c822a1388c.js"],"default"]
+b:I[28393,[],""]
+:HL["/_next/static/media/be955174636e5369-s.p.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/_next/static/media/e4af272ccee01ff0.p.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/_next/static/css/f4a5fc189f2ecb50.css","style"]
+:HL["/_next/static/css/456790cee89b5be4.css","style"]
 :HL["/_next/static/css/1bce7c578e8ec268.css","style"]
-0:{"P":null,"b":"JpQrhVC1hARxFhZcxg2IY","p":"","c":["","customers"],"i":false,"f":[[["",{"children":["customers",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/7e7d96b1e6991756.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/css/d77eed3c65f881ab.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/css/1bce7c578e8ec268.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"en","children":["$","body",null,{"className":"__className_f367f3","children":["$","$L2",null,{"children":["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]}]]}],{"children":["customers",["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":["__PAGE__",["$","$1","c",{"children":[["$","$L5",null,{"Component":"$6","searchParams":{},"params":{},"promises":["$@7","$@8"]}],null,["$","$L9",null,{"children":["$La",["$","$Lb",null,{"promise":"$@c"}]]}]]}],{},null,false]},null,false]},null,false],["$","$1","h",{"children":[null,[["$","$Ld",null,{"children":"$Le"}],null],["$","$Lf",null,{"children":["$","div",null,{"hidden":true,"children":["$","$10",null,{"fallback":null,"children":"$L11"}]}]}]]}],false]],"m":"$undefined","G":["$12",[]],"s":false,"S":true}
-7:{}
-8:"$0:f:0:1:2:children:2:children:1:props:children:0:props:params"
-e:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
-a:null
-13:I[38175,[],"IconMark"]
-c:{"metadata":[["$","title","0",{"children":"Mirror Beauty Lounge - Admin Dashboard"}],["$","meta","1",{"name":"description","content":"Admin dashboard for Mirror Beauty Lounge management system"}],["$","link","2",{"rel":"icon","href":"/favicon.ico","type":"image/x-icon","sizes":"512x512"}],["$","$L13","3",{}]],"error":null,"digest":"$undefined"}
-11:"$c:metadata"
+7:T6d6,
+              // Performance monitoring
+              if (typeof window !== 'undefined') {
+                // Track largest contentful paint
+                const observer = new PerformanceObserver((list) => {
+                  const entries = list.getEntries();
+                  const lastEntry = entries[entries.length - 1];
+                  console.log('LCP:', lastEntry.startTime, 'ms');
+                });
+                observer.observe({entryTypes: ['largest-contentful-paint']});
+                
+                // Track layout shifts
+                const layoutShiftObserver = new PerformanceObserver((list) => {
+                  console.log('CLS:', list.getEntries());
+                });
+                layoutShiftObserver.observe({entryTypes: ['layout-shift']});
+                
+                // Prefetch likely navigation targets
+                setTimeout(() => {
+                  const paths = ['/services', '/bookings', '/staff', '/analytics'];
+                  paths.forEach(path => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = path;
+                    link.as = 'document';
+                    document.head.appendChild(link);
+                  });
+                }, 3000);
+                
+                // Optimize scrolling performance
+                if ('scrollBehavior' in document.documentElement.style) {
+                  // Native smooth scrolling supported
+                } else {
+                  // Load polyfill only if needed
+                  import('smoothscroll-polyfill').then(module => {
+                    module.polyfill();
+                  });
+                }
+              }
+            0:{"P":null,"b":"g3X0a3TaEE_rzKRtMkWeJ","p":"","c":["","customers"],"i":false,"f":[[["",{"children":["customers",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/f4a5fc189f2ecb50.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/css/456790cee89b5be4.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/css/1bce7c578e8ec268.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"en","className":"h-full","suppressHydrationWarning":true,"children":[["$","head",null,{"children":[["$","link",null,{"rel":"preconnect","href":"https://fonts.googleapis.com","crossOrigin":"anonymous"}],["$","link",null,{"rel":"preconnect","href":"https://fonts.gstatic.com","crossOrigin":"anonymous"}],["$","link",null,{"rel":"dns-prefetch","href":"//fonts.googleapis.com"}],["$","link",null,{"rel":"dns-prefetch","href":"//fonts.gstatic.com"}],["$","meta",null,{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"}],["$","meta",null,{"name":"google","content":"notranslate"}],["$","meta",null,{"name":"format-detection","content":"telephone=no"}],["$","meta",null,{"name":"theme-color","content":"#ffffff"}]]}],["$","body",null,{"className":"__className_214d7f antialiased h-full bg-white","suppressHydrationWarning":true,"children":[["$","$L2",null,{"children":[["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}],["$","$L5",null,{}]]}],["$","$L6",null,{}],["$","script",null,{"dangerouslySetInnerHTML":{"__html":"$7"}}]]}]]}]]}],{"children":["customers","$L8",{"children":["__PAGE__","$L9",{},null,false]},null,false]},null,false],"$La",false]],"m":"$undefined","G":["$b",[]],"s":false,"S":true}
+c:I[90894,[],"ClientPageRoot"]
+d:I[5373,["9135","static/chunks/7508b87c-1dd6dc389d7f1e63.js","7210","static/chunks/261b60bd-63276c496123da21.js","3524","static/chunks/2170a4aa-5058233e9ea5fb68.js","1748","static/chunks/1748-5d47ef150bd72a8a.js","6061","static/chunks/6061-3b74460fecfb2b8c.js","5228","static/chunks/5228-fd7f1567610741e9.js","9323","static/chunks/9323-dbda5fc5e4cd0c62.js","5812","static/chunks/app/customers/page-3c6387b900e2ef51.js"],"default"]
+10:I[59665,[],"OutletBoundary"]
+12:I[74911,[],"AsyncMetadataOutlet"]
+14:I[59665,[],"ViewportBoundary"]
+16:I[59665,[],"MetadataBoundary"]
+17:"$Sreact.suspense"
+8:["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}]
+9:["$","$1","c",{"children":[["$","$Lc",null,{"Component":"$d","searchParams":{},"params":{},"promises":["$@e","$@f"]}],null,["$","$L10",null,{"children":["$L11",["$","$L12",null,{"promise":"$@13"}]]}]]}]
+a:["$","$1","h",{"children":[null,[["$","$L14",null,{"children":"$L15"}],["$","meta",null,{"name":"next-size-adjust","content":""}]],["$","$L16",null,{"children":["$","div",null,{"hidden":true,"children":["$","$17",null,{"fallback":null,"children":"$L18"}]}]}]]}]
+e:{}
+f:"$9:props:children:0:props:params"
+15:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+11:null
+19:I[38175,[],"IconMark"]
+13:{"metadata":[["$","title","0",{"children":"Mirror Beauty Lounge - Admin Dashboard"}],["$","meta","1",{"name":"description","content":"Admin dashboard for Mirror Beauty Lounge management system"}],["$","meta","2",{"name":"author","content":"Mirror Beauty Lounge"}],["$","meta","3",{"name":"keywords","content":"beauty salon,management,dashboard,appointments"}],["$","meta","4",{"name":"robots","content":"noindex, nofollow"}],["$","meta","5",{"property":"og:title","content":"Mirror Beauty Lounge - Admin Dashboard"}],["$","meta","6",{"property":"og:description","content":"Admin dashboard for Mirror Beauty Lounge management system"}],["$","meta","7",{"property":"og:site_name","content":"Mirror Beauty Lounge"}],["$","meta","8",{"property":"og:type","content":"website"}],["$","meta","9",{"name":"twitter:card","content":"summary"}],["$","meta","10",{"name":"twitter:title","content":"Mirror Beauty Lounge - Admin Dashboard"}],["$","meta","11",{"name":"twitter:description","content":"Admin dashboard for Mirror Beauty Lounge management system"}],["$","link","12",{"rel":"icon","href":"/favicon.ico","type":"image/x-icon","sizes":"512x512"}],["$","$L19","13",{}]],"error":null,"digest":"$undefined"}
+18:"$13:metadata"
