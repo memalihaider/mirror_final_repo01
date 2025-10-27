@@ -2,11 +2,14 @@ import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { XCircle, Trash2, Plus } from "lucide-react";
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { Booking, BookingService, BookingFormData, PaymentDetail } from '@/types/booking';
+import { Booking, BookingService as OriginalBookingService, BookingFormData, PaymentDetail } from '@/types/booking';
+
+// Extend BookingService to include tip for this component
+type BookingService = OriginalBookingService & { tip?: number };
 
 // Memoized components to prevent unnecessary re-renders
 interface ServiceRowProps {
-  service: BookingService;
+  service: BookingService; // local extended type
   index: number;
   serviceOptions: any[];
   selectedCategory: string;
@@ -212,7 +215,7 @@ interface BookingModalProps {
   onGenerateInvoice?: (booking: Booking) => void;
 }
 
-const emptyService: BookingService = {
+const emptyService: BookingService & { tip?: number } = {
   serviceId: "",
   serviceName: "",
   category: "",
@@ -220,6 +223,7 @@ const emptyService: BookingService = {
   price: 0,
   quantity: 1,
   staffMember: "",
+  tip: 0,
 };
 
 // Cached static data to prevent recreation on every render - performance optimized
@@ -277,7 +281,7 @@ function toDisplayAMPM(hhmm: string): string {
 }
 
 // Optimized calculation function with memoization - performance optimized
-function calcTotals(services: BookingService[]): { totalPrice: number; totalDuration: number } {
+function calcTotals(services: (BookingService & { tip?: number })[]): { totalPrice: number; totalDuration: number; totalTip: number } {
   const totalPrice = services.reduce(
     (sum, s) => sum + (Number(s.price) || 0) * (Number(s.quantity) || 0),
     0
@@ -286,7 +290,11 @@ function calcTotals(services: BookingService[]): { totalPrice: number; totalDura
     (sum, s) => sum + (Number(s.duration) || 0) * (Number(s.quantity) || 0),
     0
   );
-  return { totalPrice, totalDuration };
+  const totalTip = services.reduce(
+    (sum, s) => sum + (Number(s.tip) || 0),
+    0
+  );
+  return { totalPrice, totalDuration, totalTip };
 }
 
 export const BookingModal = memo(function BookingModal({
@@ -346,7 +354,8 @@ export const BookingModal = memo(function BookingModal({
 
   // Memoized calculations - moved here to be available for validation
   const totals = useMemo(() => calcTotals(formData.services), [formData.services]);
-  const finalTotal = useMemo(() => totals.totalPrice + (formData.tip || 0) - (formData.discount || 0), [totals.totalPrice, formData.tip, formData.discount]);
+  // Remove formData.tip from finalTotal, use per-service tip instead
+  const finalTotal = useMemo(() => totals.totalPrice + totals.totalTip - (formData.discount || 0), [totals.totalPrice, totals.totalTip, formData.discount]);
 
   // Memoized payment total calculation
   const totalPaid = useMemo(() => {
@@ -394,6 +403,11 @@ export const BookingModal = memo(function BookingModal({
               category: selectedService.category || s.category,
             };
           }
+        }
+
+        // For tip, ensure it's a number
+        if (field === "tip") {
+          return { ...s, tip: Number(value) || 0 };
         }
 
         return { ...s, [field]: value };
@@ -669,47 +683,104 @@ export const BookingModal = memo(function BookingModal({
 
             {/* Services table */}
             <div className="border rounded-lg">
-              <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
+              <div className="grid grid-cols-13 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
                 <div className="col-span-3">Service</div>
                 <div className="col-span-2">Staff Member</div>
                 <div className="col-span-2">Duration (min)</div>
                 <div className="col-span-2">Price</div>
                 <div className="col-span-1">Qty</div>
+                <div className="col-span-2">Tip (AED)</div>
                 <div className="col-span-1 text-right">—</div>
               </div>
 
               {formData.services.map((s, idx) => (
-                <ServiceRow
-                  key={idx}
-                  service={s}
-                  index={idx}
-                  serviceOptions={serviceOptions}
-                  selectedCategory={selectedCategory}
-                  staffOptions={staffOptions}
-                  onChange={handleServiceChange}
-                  onRemove={handleRemoveServiceRow}
-                  showRemove={formData.services.length > 1}
-                />
-              ))}
-
-              {/* Tip + Discount + Total */}
-              <div className="px-4 py-3 border-t space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Tip Amount (AED)
-                    </label>
+                <div className="grid grid-cols-13 gap-2 px-4 py-3 border-t" key={idx}>
+                  <div className="col-span-3">
+                    <select
+                      className="w-full border rounded-md px-3 py-2"
+                      value={s.serviceName}
+                      onChange={(e) => handleServiceChange(idx, "serviceName", e.target.value)}
+                    >
+                      <option value="">Select a service</option>
+                      {serviceOptions.filter((serviceOption: any) =>
+                        selectedCategory ? serviceOption.category === selectedCategory : true
+                      ).map((serviceOption: any) => (
+                        <option key={serviceOption.id} value={serviceOption.name}>
+                          {serviceOption.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <select
+                      className="w-full border rounded-md px-3 py-2"
+                      value={s.staffMember || ""}
+                      onChange={(e) => handleServiceChange(idx, "staffMember", e.target.value)}
+                    >
+                      <option value="">Select staff</option>
+                      {staffOptions.map((staff: string) => (
+                        <option key={staff} value={staff}>
+                          {staff}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
                     <input
                       type="number"
-                      min="0"
-                      step="0.01"
-                      className="mt-1 w-full border rounded-md px-3 py-2"
-                      placeholder="Enter tip"
-                      value={formData.tip || ""}
-                      onChange={(e) => handleInputChange('tip', Number(e.target.value) || 0)}
+                      min={0}
+                      className="w-full border rounded-md px-3 py-2"
+                      value={s.duration}
+                      onChange={(e) => handleServiceChange(idx, "duration", Number(e.target.value || 0))}
                     />
                   </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="w-full border rounded-md px-3 py-2"
+                      value={s.price}
+                      onChange={(e) => handleServiceChange(idx, "price", Number(e.target.value || 0))}
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <input
+                      type="number"
+                      min={1}
+                      className="w-full border rounded-md px-3 py-2"
+                      value={s.quantity}
+                      onChange={(e) => handleServiceChange(idx, "quantity", Number(e.target.value || 1))}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="w-full border rounded-md px-3 py-2"
+                      placeholder="Tip (AED)"
+                      value={s.tip || 0}
+                      onChange={(e) => handleServiceChange(idx, "tip", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-1 flex justify-end items-center">
+                    {formData.services.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveServiceRow(idx)}
+                        className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
 
+              {/* Discount + Total */}
+              <div className="px-4 py-3 border-t space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
                       Discount (%)
@@ -730,6 +801,11 @@ export const BookingModal = memo(function BookingModal({
                     <div className="text-sm font-semibold text-gray-800">
                       Final Total: AED {finalTotal.toFixed(2)}
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Total Tip: AED {totals.totalTip.toFixed(2)}
+                    </label>
                   </div>
                 </div>
               </div>

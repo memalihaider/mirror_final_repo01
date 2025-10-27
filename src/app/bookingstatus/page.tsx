@@ -46,6 +46,7 @@ interface BookingService {
   duration: number; // minutes
   price: number; // per unit
   quantity: number;
+  tip?: number; // per-service tip
 }
 
 type BookingStatus = 'upcoming' | 'past' | 'cancelled';
@@ -60,7 +61,7 @@ interface Booking {
   bookingTime: string; // "HH:mm"
   branch: string;
   staff: string | null; // name string
-  totalPrice: number;
+  totalPrice: number; // base price (without tips)
   totalDuration: number;
   status: BookingStatus;
   paymentMethod: string;
@@ -73,7 +74,7 @@ interface Booking {
   tips?: number;
   excludedPayments?: number;
   inHand?: number;
-  paymentDetails?: Record<string, number>;
+  paymentDetails?: Record<string, number>; // method: amount
   emailConfirmation: boolean;
   smsConfirmation: boolean;
   createdAt: Date;
@@ -136,6 +137,10 @@ export default function BookingsAndFinancePage() {
   /* -------------------- Load Staff from Firebase -------------------- */
   useEffect(() => {
     const loadStaff = async () => {
+      if (!db) {
+        setStaffFromDB(STAFF_FALLBACK);
+        return;
+      }
       try {
         const snap = await getDocs(collection(db, 'staff'));
         const list: string[] = [];
@@ -153,8 +158,9 @@ export default function BookingsAndFinancePage() {
 
   /* -------------------- Realtime bookings listener -------------------- */
   useEffect(() => {
-    const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
+  if (!db) return;
+  const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'));
+  const unsub = onSnapshot(q, (snap) => {
       const items: Booking[] = snap.docs.map((d) => {
         const data = d.data() as any;
         return {
@@ -397,6 +403,7 @@ export default function BookingsAndFinancePage() {
 
   const updateBookingStatus = async (bookingId: string, newStatus: BookingStatus) => {
     try {
+      if (!db) throw new Error('Firestore not initialized');
       const bookingRef = doc(db, 'bookings', bookingId);
       await updateDoc(bookingRef, {
         status: newStatus,
@@ -421,16 +428,18 @@ export default function BookingsAndFinancePage() {
     doc.text(`Branch: ${b.branch}`, 40, startY + 110);
     doc.text(`Staff: ${b.staff || '—'}`, 40, startY + 130);
 
+    // Calculate per-service total with tip
     const serviceTableData = b.services.map((s, idx) => [
       idx + 1,
       s.serviceName,
       s.quantity,
       `$${Number(s.price).toFixed(2)}`,
-      `$${(Number(s.price) * Number(s.quantity)).toFixed(2)}`,
+  typeof s.tip === 'number' ? `$${Number(s.tip).toFixed(2)}` : '-',
+      `$${((Number(s.price) * Number(s.quantity)) + (Number(s.tip) || 0)).toFixed(2)}`,
     ]);
 
     autoTable(doc, {
-      head: [['#', 'Service', 'Qty', 'Unit Price', 'Total']],
+      head: [['#', 'Service', 'Qty', 'Unit Price', 'Tip', 'Total']],
       body: serviceTableData,
       startY: startY + 160,
       theme: 'grid',
@@ -438,10 +447,24 @@ export default function BookingsAndFinancePage() {
       margin: { left: 40, right: 40 },
     });
 
+    // Calculate real-time total: sum of all service totals (price*qty+tip)
+    const realTotal = b.services.reduce((sum, s) => sum + (Number(s.price) * Number(s.quantity)) + (Number(s.tip) || 0), 0);
+
+    // Payment details (if present)
+    let paymentDetailsText = '';
+    if (b.paymentDetails && typeof b.paymentDetails === 'object') {
+      paymentDetailsText = Object.entries(b.paymentDetails)
+        .map(([method, amt]) => `${method}: $${Number(amt).toFixed(2)}`)
+        .join(', ');
+    }
+
     const finalY = (doc as any).lastAutoTable?.finalY || startY + 160;
     doc.setFontSize(12);
     doc.text(`Total Duration: ${b.totalDuration} min`, 40, finalY + 25);
-    doc.text(`Total Price: $${b.totalPrice.toFixed(2)}`, 40, finalY + 45);
+    doc.text(`Total Price: $${realTotal.toFixed(2)}`, 40, finalY + 45);
+    if (paymentDetailsText) {
+      doc.text(`Payments: ${paymentDetailsText}`, 40, finalY + 65);
+    }
 
     doc.save(`Invoice_${b.customerName.replace(/\s+/g, '_')}.pdf`);
   };
@@ -518,7 +541,16 @@ export default function BookingsAndFinancePage() {
                     </td>
                     <td className="px-4 py-3">{b.staff || '—'}</td>
                     <td className="px-4 py-3">{b.branch}</td>
-                    <td className="px-4 py-3">AED{b.totalPrice.toFixed(2)} <div className="text-xs text-gray-500">{b.paymentMethod}</div></td>
+                    <td className="px-4 py-3">
+                      AED{
+                        b.services.reduce((sum, s) => sum + (Number(s.price) * Number(s.quantity)) + (Number(s.tip) || 0), 0).toFixed(2)
+                      }
+                      <div className="text-xs text-gray-500">
+                        {b.paymentDetails && typeof b.paymentDetails === 'object'
+                          ? Object.entries(b.paymentDetails).map(([method, amt]) => `${method}: AED${Number(amt).toFixed(2)}`).join(', ')
+                          : b.paymentMethod}
+                      </div>
+                    </td>
                     <td className="px-4 py-3"><span className="px-2 py-1 rounded-full bg-gray-100 text-xs">{b.status}</span></td>
                     <td className="px-4 py-3" onClick={(e)=>e.stopPropagation()}>
                      <div className="flex gap-2">
@@ -571,7 +603,7 @@ export default function BookingsAndFinancePage() {
                 <div className="flex justify-between items-center p-4 border-b">
                   <h3 className="font-semibold">{editingId ? 'Edit Booking' : 'Add Booking'}</h3>
                   <div className="flex gap-2">
-                    {editingId && <button onClick={async()=>{ if(!confirm('Delete?')) return; setDeleting(true); try{ await deleteDoc(doc(db,'bookings',editingId)); setShowCreate(false); resetForm(); }catch(e){console.error(e); alert('Delete failed'); } finally{ setDeleting(false);} }} className="px-3 py-1 bg-red-600 text-white rounded">Delete</button>}
+                    {editingId && <button onClick={async()=>{ if(!confirm('Delete?')) return; setDeleting(true); try{ if(!db) throw new Error('Firestore not initialized'); await deleteDoc(doc(db,'bookings',editingId)); setShowCreate(false); resetForm(); }catch(e){console.error(e); alert('Delete failed'); } finally{ setDeleting(false);} }} className="px-3 py-1 bg-red-600 text-white rounded">Delete</button>}
                     <button onClick={()=>{ setShowCreate(false); resetForm(); }} className="px-3 py-1">Close</button>
                   </div>
                 </div>

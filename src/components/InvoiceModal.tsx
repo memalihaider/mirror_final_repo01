@@ -316,6 +316,7 @@ export const InvoiceModal = memo(function InvoiceModal({ isOpen, invoiceData, on
                   <th className="p-3 text-left">Staff</th>
                   <th className="p-3 text-center">Qty</th>
                   <th className="p-3 text-right">Price</th>
+                  <th className="p-3 text-right">Tip</th>
                   <th className="p-3 text-right">Total</th>
                 </tr>
               </thead>
@@ -383,7 +384,10 @@ export const InvoiceModal = memo(function InvoiceModal({ isOpen, invoiceData, on
                       )}
                     </td>
                     <td className="p-3 text-right">
-                      AED {(Number(s.price) * Number(s.quantity)).toFixed(2)}
+                      {s.tip !== undefined && s.tip !== null && s.tip !== "" ? `AED ${Number(s.tip).toFixed(2)}` : "-"}
+                    </td>
+                    <td className="p-3 text-right">
+                      AED {(Number(s.price) * Number(s.quantity) + (Number(s.tip) || 0)).toFixed(2)}
                     </td>
                   </tr>
                 ))}
