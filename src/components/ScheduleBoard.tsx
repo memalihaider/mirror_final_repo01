@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useCallback, memo, useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, CreditCard, User, Plus, Search, Filter, X, CheckCircle, AlertCircle } from "lucide-react";
+import { useMemo, useCallback, memo, useState, useEffect } from 'react';
+import { Calendar, Clock, CreditCard, User, Plus, Search, Filter, X } from "lucide-react";
 import { format, isSameDay } from 'date-fns';
 import { Booking } from '@/types/booking';
 import { useAuth } from '@/contexts/AuthContext';
@@ -138,64 +138,11 @@ const calculateBookingPosition = (bookingTime: string, duration: number) => {
   return result;
 };
 
-// Notification System
-interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'info';
-  title: string;
-  message: string;
-  duration?: number;
-}
-
+// Notification System removed for performance - stub only
 const NotificationContainer = memo(({ notifications, removeNotification }: {
-  notifications: Notification[];
+  notifications: any[];
   removeNotification: (id: string) => void;
-}) => {
-  return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full">
-      {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className={`p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-200 ease-out ${
-            notification.type === 'success'
-              ? 'bg-green-50 border-green-500 text-green-800'
-              : notification.type === 'error'
-              ? 'bg-red-50 border-red-500 text-red-800'
-              : 'bg-blue-50 border-blue-500 text-blue-800'
-          } animate-in slide-in-from-right-full`}
-        >
-          <div className="flex items-start gap-3">
-            <div className={`flex-shrink-0 ${
-              notification.type === 'success'
-                ? 'text-green-500'
-                : notification.type === 'error'
-                ? 'text-red-500'
-                : 'text-blue-500'
-            }`}>
-              {notification.type === 'success' ? (
-                <CheckCircle className="w-5 h-5" />
-              ) : notification.type === 'error' ? (
-                <AlertCircle className="w-5 h-5" />
-              ) : (
-                <AlertCircle className="w-5 h-5" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-sm">{notification.title}</h4>
-              <p className="text-sm opacity-90 mt-1">{notification.message}</p>
-            </div>
-            <button
-              onClick={() => removeNotification(notification.id)}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-150"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-});
+}) => null);
 
 NotificationContainer.displayName = 'NotificationContainer';
 
@@ -271,57 +218,27 @@ const PaymentMethodsDisplay = memo(({ paymentMethods }: { paymentMethods: string
 
 PaymentMethodsDisplay.displayName = 'PaymentMethodsDisplay';
 
-// ULTRA-FAST drag data - minimal data transfer
-const createDragData = (booking: Booking) => ({
-  type: 'booking',
-  id: booking.id
-});
+// Drag and drop removed for performance
 
-// ULTRA-OPTIMIZED BookingCard - No expensive calculations
+// ULTRA-OPTIMIZED BookingCard - No drag/drop for performance
 const BookingCard = memo(({ 
   booking, 
   onEdit, 
   onGenerateInvoice, 
   isAdmin, 
   showTime = true, 
-  slotDuration = 1,
-  onDragStart,
-  onDragEnd
+  slotDuration = 1
 }: any) => {
-  const cardRef = useRef<HTMLDivElement>(null);
-
   const handleInvoiceClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onGenerateInvoice(booking);
   }, [booking, onGenerateInvoice]);
 
   const handleCardClick = useCallback((e: React.MouseEvent) => {
-    if (!(e.target as HTMLElement).closest('.invoice-button') && 
-        !(e.target as HTMLElement).closest('.drag-handle')) {
+    if (!(e.target as HTMLElement).closest('.invoice-button')) {
       onEdit(booking);
     }
   }, [booking, onEdit]);
-
-  const handleDragStart = useCallback((e: React.DragEvent) => {
-    e.stopPropagation();
-    const dragData = createDragData(booking);
-    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
-    e.dataTransfer.effectAllowed = 'move';
-    
-    // INSTANT visual feedback
-    if (cardRef.current) {
-      cardRef.current.style.opacity = '0.7';
-    }
-    
-    onDragStart?.(booking);
-  }, [booking, onDragStart]);
-
-  const handleDragEnd = useCallback((e: React.DragEvent) => {
-    if (cardRef.current) {
-      cardRef.current.style.opacity = '1';
-    }
-    onDragEnd?.();
-  }, [onDragEnd]);
 
   // PRE-COMPUTED values from parent - no calculations here
   const { serviceNames, statusStyle, displayTime, endTimeDisplay, cardHeight } = useMemo(() => ({
@@ -334,22 +251,17 @@ const BookingCard = memo(({
 
   return (
     <div
-      ref={cardRef}
       onClick={handleCardClick}
-      draggable="true"
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      className={`w-full rounded-lg ${statusStyle.background} ${statusStyle.border} ${statusStyle.text} shadow-lg hover:shadow-xl transition-all duration-150 ease-out cursor-grab active:cursor-grabbing overflow-hidden absolute top-1 left-1 right-1 bottom-1 transform-gpu`}
+      className={`w-full rounded-lg ${statusStyle.background} ${statusStyle.border} ${statusStyle.text} shadow-lg cursor-pointer overflow-hidden absolute top-1 left-1 right-1 bottom-1`}
       style={{ 
         height: `${cardHeight}px`, 
         minHeight: '52px'
       }}
-      title={`Drag to move - ${booking.customerName}`}
+      title={booking.customerName}
     >
       <div className={`${statusStyle.header} border-b border-white/20 px-2 py-1 flex justify-between items-center`}>
         <div className="flex-1 min-w-0 pr-2">
-          <div className="font-extrabold text-sm truncate flex items-center">
-            <span className="drag-handle mr-1 cursor-grab">⠿</span>
+          <div className="font-extrabold text-sm truncate">
             {booking.customerName}
           </div>
         </div>
@@ -427,51 +339,19 @@ const TimeSlot = memo(({ time }: { time: string }) => {
 
 TimeSlot.displayName = 'TimeSlot';
 
-// ULTRA-FAST ScheduleCell - Minimal state, no expensive operations
+// ULTRA-FAST ScheduleCell - No drag/drop for performance
 const ScheduleCell = memo(({ 
   time, 
   staff, 
   isOccupied, 
   hasPrimary, 
   onCellClick, 
-  onDropBooking,
   primaryBookings,
   getSlotDuration,
   onEditBooking,
   onGenerateInvoice,
-  isAdmin,
-  onDragStart,
-  onDragEnd
+  isAdmin
 }: any) => {
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (!isOccupied) {
-      setIsDragOver(true);
-    }
-  }, [isOccupied]);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    
-    try {
-      const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-      if (dragData.type === 'booking') {
-        onDropBooking(dragData, staff, time);
-      }
-    } catch (error) {
-      console.log('Drop error');
-    }
-  }, [staff, time, onDropBooking]);
-
   const handleClick = useCallback(() => {
     if (!isOccupied) {
       onCellClick(staff, time);
@@ -480,27 +360,13 @@ const ScheduleCell = memo(({
 
   return (
     <div
-      className={`border-r border-gray-200 relative h-full transition-colors duration-100 ${
-        isDragOver 
-          ? 'bg-blue-100 border-2 border-blue-400' 
-          : !isOccupied 
-            ? 'hover:bg-gray-50 cursor-pointer' 
-            : ''
-      }`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      className={`border-r border-gray-200 relative h-full ${!isOccupied ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
       onClick={handleClick}
     >
       <div className="p-1 h-full relative">
-        {isDragOver && !isOccupied ? (
-          <div className="flex flex-col items-center justify-center text-blue-600 font-bold h-full">
-            <div className="text-2xl mb-1">⬇️</div>
-            <div className="text-xs">Drop to Move</div>
-          </div>
-        ) : !isOccupied && !hasPrimary ? (
+        {!isOccupied && !hasPrimary ? (
           <button
-            className="flex items-center justify-center w-10 h-10 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-full transition-colors border-2 border-dashed border-emerald-400 hover:border-emerald-500 z-10"
+            className="flex items-center justify-center w-10 h-10 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-full border-2 border-dashed border-emerald-400 hover:border-emerald-500 z-10"
             onClick={(e) => {
               e.stopPropagation();
               onCellClick(staff, time);
@@ -521,8 +387,6 @@ const ScheduleCell = memo(({
                 isAdmin={isAdmin}
                 showTime={true}
                 slotDuration={slotDuration}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
               />
             );
           })
@@ -667,52 +531,12 @@ export default function ScheduleBoard({
     branch: "", staff: "", date: "", customer: "", time: ""
   });
   const [localSearchTerm, setLocalSearchTerm] = useState("");
-  const [draggedBooking, setDraggedBooking] = useState<Booking | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  // FAST Notification system
-  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const newNotification = { ...notification, id };
-    setNotifications(prev => [...prev, newNotification]);
-    
-    setTimeout(() => removeNotification(id), notification.duration || 3000);
-  }, []);
-
+  // Simplified - drag/drop removed for performance
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
-
-  // INSTANT drag handlers
-  const handleDragStart = useCallback((booking: Booking) => {
-    setDraggedBooking(booking);
-  }, []);
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedBooking(null);
-  }, []);
-
-  // INSTANT drop handler
-  const handleDropBooking = useCallback((dragData: any, newStaff: string, newTime: string) => {
-    const originalBooking = bookings.find(b => b.id === dragData.id);
-    if (!originalBooking) return;
-
-    // INSTANT confirmation - no dialog for speed
-    const updatedBooking = {
-      ...originalBooking,
-      staff: newStaff,
-      bookingTime: newTime
-    };
-    
-    onEditBooking(updatedBooking);
-    
-    addNotification({
-      type: 'success',
-      title: 'Booking Moved',
-      message: `Moved to ${newStaff} at ${toDisplayAMPM(newTime)}`,
-      duration: 2000
-    });
-  }, [bookings, onEditBooking, addNotification]);
 
   const effectiveFilters = Object.keys(filters).length > 0 ? filters : localFilters;
   const effectiveSearchTerm = searchTerm || localSearchTerm;
@@ -897,14 +721,11 @@ export default function ScheduleBoard({
                     isOccupied={utils.isCellOccupied(time, sName)}
                     hasPrimary={utils.hasPrimaryBookings(time, sName)}
                     onCellClick={handleCellClick}
-                    onDropBooking={handleDropBooking}
                     primaryBookings={primaryBookings}
                     getSlotDuration={utils.getSlotDuration}
                     onEditBooking={onEditBooking}
                     onGenerateInvoice={onGenerateInvoice}
                     isAdmin={isAdmin}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
                   />
                 );
               })}

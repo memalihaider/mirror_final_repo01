@@ -535,39 +535,45 @@ export const BookingModal = memo(function BookingModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto h-full w-full animate-fade-in">
-      <div className="relative top-10 mx-auto w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3">
-        <div className="bg-white rounded-lg shadow-xl border animate-scale-in">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b">
-            <h3 className="text-lg font-semibold">
-              {isEditing ? "Edit Schedule" : "Add Schedule"}
-            </h3>
-            <div className="flex items-center gap-2">
-              {isEditing && (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 transition-colors"
-                  title="Delete booking"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {deleting ? "Deleting..." : "Delete"}
-                </button>
-              )}
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-30"
+        onClick={handleClose}
+      />
+      
+      {/* Side Panel */}
+      <div className="relative w-full max-w-2xl h-full bg-white shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50 flex-shrink-0">
+          <h3 className="text-lg font-semibold">
+            {isEditing ? "Edit Schedule" : "Add Schedule"}
+          </h3>
+          <div className="flex items-center gap-2">
+            {isEditing && (
               <button
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                title="Close"
-                disabled={saving || deleting}
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-60"
+                title="Delete booking"
               >
-                <XCircle className="w-6 h-6" />
+                <Trash2 className="w-4 h-4" />
+                {deleting ? "Deleting..." : "Delete"}
               </button>
-            </div>
+            )}
+            <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-gray-600"
+              title="Close"
+              disabled={saving || deleting}
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
           </div>
+        </div>
 
-          {/* Body */}
-          <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        {/* Body - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Top selects */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -760,7 +766,7 @@ export const BookingModal = memo(function BookingModal({
                       step="0.01"
                       className="w-full border rounded-md px-3 py-2"
                       placeholder="Tip (AED)"
-                      value={s.tip || 0}
+                      value={(s as any).tip || 0}
                       onChange={(e) => handleServiceChange(idx, "tip", e.target.value)}
                     />
                   </div>
@@ -896,29 +902,28 @@ export const BookingModal = memo(function BookingModal({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t flex justify-end gap-3">
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-              disabled={saving || deleting}
-            >
-              Close
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-60 transition-colors"
-              disabled={saving || deleting}
-            >
-              {saving
-                ? isEditing
-                  ? "Updating..."
-                  : "Saving..."
-                : isEditing
-                  ? "Update"
-                  : "Save"}
-            </button>
-          </div>
+        {/* Footer - Fixed at bottom */}
+        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3 flex-shrink-0">
+          <button
+            onClick={handleClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            disabled={saving || deleting}
+          >
+            Close
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-60"
+            disabled={saving || deleting}
+          >
+            {saving
+              ? isEditing
+                ? "Updating..."
+                : "Saving..."
+              : isEditing
+                ? "Update"
+                : "Save"}
+          </button>
         </div>
       </div>
     </div>
