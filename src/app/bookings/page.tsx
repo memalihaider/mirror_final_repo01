@@ -10,6 +10,7 @@ import { BookingModal } from '@/components/BookingModal';
 import { InvoiceModal } from '@/components/InvoiceModal';
 import { useBookings } from '@/hooks/useBookings';
 import { useResources } from '@/hooks/useResources';
+import { useDebounceCallback } from '@/lib/debounce';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { Booking, BookingFormData } from '@/types/booking';
@@ -279,13 +280,21 @@ function BookingsPage() {
   const handleCloseCreateModal = useCallback(() => setShowCreateModal(false), []);
   const handleCloseInvoiceModal = useCallback(() => setShowInvoiceModal(false), []);
 
-  // Loading screen - simplified
+  // Debounced modal close handlers to prevent rapid cascading updates
+  const debouncedCloseCreateModal = useDebounceCallback(handleCloseCreateModal, 50);
+  const debouncedCloseInvoiceModal = useDebounceCallback(handleCloseInvoiceModal, 50);
+
+  // Loading screen - dark overlay with proper z-index
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col items-center justify-center">
+      <div className="fixed inset-0 bg-black/70 z-[9999] flex flex-col items-center justify-center">
         <div className="w-64 max-w-full mx-auto text-center">
-          <div className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <div className="text-lg font-semibold text-white mb-2">
             Loading Bookings...
+          </div>
+          <div className="text-sm text-gray-300">
+            Please wait while we fetch your data
           </div>
         </div>
       </div>
@@ -295,7 +304,7 @@ function BookingsPage() {
   return (
     <AccessWrapper>
       <ClientOnly>
-        <div className="w-full px-4 sm:px-6 lg:px-8 dark:text-white">
+        <div className="w-full px-4 sm:px-2 lg:px-2 dark:text-white">
           {/* <BookingsHeader onAddBooking={handleOpenCreate} /> */}
           
           {/* <BookingsFilterBar
@@ -346,14 +355,14 @@ function BookingsPage() {
             enabledHours={enabledHours}
             onSave={handleSaveBooking}
             onDelete={handleDeleteBooking}
-            onClose={handleCloseCreateModal}
+            onClose={debouncedCloseCreateModal}
             onGenerateInvoice={handleOpenInvoice}
           />
 
           <InvoiceModal
             isOpen={showInvoiceModal}
             invoiceData={invoiceData}
-            onClose={handleCloseInvoiceModal}
+            onClose={debouncedCloseInvoiceModal}
           />
         </div>
       </ClientOnly>

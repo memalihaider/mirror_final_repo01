@@ -197,6 +197,10 @@ export const ScheduleDashboard = memo(function ScheduleDashboard({ bookings, ena
 
   const totalCount = UNIQUE_HOURS.length;
 
+  // Toggle visibility of the controls section
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const toggleControls = useCallback(() => setControlsOpen((prev) => !prev), []);
+
   // Optimized toggle handlers
   const handleToggleAll = useCallback((enable: boolean) => {
     const newHours: Record<string, boolean> = {};
@@ -216,7 +220,7 @@ export const ScheduleDashboard = memo(function ScheduleDashboard({ bookings, ena
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-white/20 shadow-lg backdrop-blur-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/3 to-pink-500/3"></div>
 
-        <div className="relative p-4 sm:p-5">
+        <div className="relative p-2 sm:p-3">
           {/* Compact Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -242,96 +246,106 @@ export const ScheduleDashboard = memo(function ScheduleDashboard({ bookings, ena
                 <div className="text-sm font-bold text-emerald-600">{stats.upcoming}</div>
                 <div className="text-xs text-gray-500">Active</div>
               </div>
+              <button
+                onClick={toggleControls}
+                className="ml-2 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                aria-expanded={controlsOpen}
+                aria-controls="schedule-controls-panel"
+              >
+                {controlsOpen ? "Hide" : "Show"} controls
+              </button>
             </div>
           </div>
 
           {/* Main Content - Single Row Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Stats Section - Compact */}
-            <div className="lg:col-span-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
-                <CompactStatCard 
-                  title="Total" 
-                  value={stats.total} 
-                  icon={Calendar} 
-                  color="blue" 
-                />
-                <CompactStatCard 
-                  title="Upcoming" 
-                  value={stats.upcoming} 
-                  icon={CheckCircle} 
-                  color="green" 
-                />
-                <CompactStatCard 
-                  title="Completed" 
-                  value={stats.past} 
-                  icon={AlertCircle} 
-                  color="amber" 
-                />
-                <CompactStatCard 
-                  title="Cancelled" 
-                  value={stats.cancelled} 
-                  icon={XCircle} 
-                  color="red" 
-                />
-              </div>
-            </div>
-
-            {/* Hours Control - Compact */}
-            <div className="lg:col-span-8">
-              <div className="bg-white/50 rounded-lg p-4 border border-white/50">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">Business Hours</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleToggleAll(true)}
-                      className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={() => handleToggleAll(false)}
-                      className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-                    >
-                      None
-                    </button>
-                  </div>
-                </div>
-
-                {/* Compact Hours Grid */}
-                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1">
-                  {UNIQUE_HOURS.map((hour) => (
-                    <CompactHourToggle 
-                      key={hour}
-                      hour={hour}
-                      enabled={!!enabledHours[hour]}
-                      onChange={(enabled: boolean) => handleHourChange(hour, enabled)}
-                    />
-                  ))}
-                </div>
-
-                {/* Status Legend */}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                  <div className="flex items-center gap-4 text-xs text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span>Enabled</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                      <span>Disabled</span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {enabledCount}/{totalCount} enabled
-                  </div>
+          {controlsOpen && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4" id="schedule-controls-panel">
+              {/* Stats Section - Compact */}
+              <div className="lg:col-span-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
+                  <CompactStatCard 
+                    title="Total" 
+                    value={stats.total} 
+                    icon={Calendar} 
+                    color="blue" 
+                  />
+                  <CompactStatCard 
+                    title="Upcoming" 
+                    value={stats.upcoming} 
+                    icon={CheckCircle} 
+                    color="green" 
+                  />
+                  <CompactStatCard 
+                    title="Completed" 
+                    value={stats.past} 
+                    icon={AlertCircle} 
+                    color="amber" 
+                  />
+                  <CompactStatCard 
+                    title="Cancelled" 
+                    value={stats.cancelled} 
+                    icon={XCircle} 
+                    color="red" 
+                  />
                 </div>
               </div>
+
+              {/* Hours Control - Compact */}
+              <div className="lg:col-span-8">
+                <div className="bg-white/50 rounded-lg p-4 border border-white/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Business Hours</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleToggleAll(true)}
+                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => handleToggleAll(false)}
+                        className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                      >
+                        None
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Compact Hours Grid */}
+                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1">
+                    {UNIQUE_HOURS.map((hour) => (
+                      <CompactHourToggle 
+                        key={hour}
+                        hour={hour}
+                        enabled={!!enabledHours[hour]}
+                        onChange={(enabled: boolean) => handleHourChange(hour, enabled)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Status Legend */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-4 text-xs text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span>Enabled</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                        <span>Disabled</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {enabledCount}/{totalCount} enabled
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

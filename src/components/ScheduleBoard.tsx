@@ -208,7 +208,7 @@ const PaymentMethodsDisplay = memo(({ paymentMethods }: { paymentMethods: string
           <span>{paymentConfigs[0].icon}</span>
           <span>{paymentConfigs[0].label}</span>
         </span>
-        <span className="bg-blue-100 text-blue-700 px-1 rounded text-[10px] font-bold border border-blue-200 ml-1">
+        <span className="bg-blue-100 text-blue-700 px-1 text-[10px] font-bold border border-blue-200 ml-1">
           +{methods.length - 1}
         </span>
       </div>
@@ -252,7 +252,7 @@ const BookingCard = memo(({
   return (
     <div
       onClick={handleCardClick}
-      className={`w-full rounded-lg ${statusStyle.background} ${statusStyle.border} ${statusStyle.text} shadow-lg cursor-pointer overflow-hidden absolute top-1 left-1 right-1 bottom-1`}
+      className={`w-full ${statusStyle.background} ${statusStyle.border} ${statusStyle.text} cursor-pointer overflow-hidden absolute top-1 left-1 right-1 bottom-1`}
       style={{ 
         height: `${cardHeight}px`, 
         minHeight: '52px'
@@ -269,13 +269,13 @@ const BookingCard = memo(({
           {booking.status === "past" && (
             <button
               onClick={handleInvoiceClick}
-              className="invoice-button text-[10px] px-2 py-1 rounded-lg bg-white text-gray-800 hover:bg-gray-100 transition-colors border border-gray-300 hover:border-gray-400 whitespace-nowrap font-bold shadow-sm flex-shrink-0"
+              className="invoice-button text-[10px] px-2 py-1 bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 hover:border-gray-400 whitespace-nowrap font-bold flex-shrink-0"
             >
               💰 Invoice
             </button>
           )}
           {showTime && (
-            <span className="text-[10px] font-black bg-black bg-opacity-30 px-2 py-1 rounded-md whitespace-nowrap tracking-tight flex-shrink-0">
+            <span className="text-[10px] font-black bg-black bg-opacity-30 px-2 py-1 whitespace-nowrap tracking-tight flex-shrink-0">
               {displayTime}
             </span>
           )}
@@ -308,7 +308,7 @@ const BookingCard = memo(({
         </div>
 
         <div className="absolute bottom-1 right-1">
-          <div className="text-[10px] font-bold bg-black bg-opacity-40 px-2 py-0.5 rounded-md border border-white/20">
+          <div className="text-[10px] font-bold bg-black bg-opacity-40 px-2 py-0.5 border border-white/20">
             {booking.totalDuration || 30}m
           </div>
         </div>
@@ -352,11 +352,18 @@ const ScheduleCell = memo(({
   onGenerateInvoice,
   isAdmin
 }: any) => {
+  // Memoize click handler with proper dependencies
   const handleClick = useCallback(() => {
     if (!isOccupied) {
       onCellClick(staff, time);
     }
   }, [isOccupied, staff, time, onCellClick]);
+
+  // Memoize add button click
+  const handleAddClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCellClick(staff, time);
+  }, [staff, time, onCellClick]);
 
   return (
     <div
@@ -366,11 +373,8 @@ const ScheduleCell = memo(({
       <div className="p-1 h-full relative">
         {!isOccupied && !hasPrimary ? (
           <button
-            className="flex items-center justify-center w-10 h-10 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-full border-2 border-dashed border-emerald-400 hover:border-emerald-500 z-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCellClick(staff, time);
-            }}
+            className="flex items-center justify-center w-10 h-10 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 border-2 border-dashed border-emerald-400 hover:border-emerald-500 z-10"
+            onClick={handleAddClick}
             title="Add Booking"
           >
             <Plus className="w-5 h-5 font-bold" />
@@ -393,6 +397,16 @@ const ScheduleCell = memo(({
         )}
       </div>
     </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for better performance - only re-render if actual data changes
+  return (
+    prevProps.staff === nextProps.staff &&
+    prevProps.time === nextProps.time &&
+    prevProps.isOccupied === nextProps.isOccupied &&
+    prevProps.hasPrimary === nextProps.hasPrimary &&
+    prevProps.primaryBookings === nextProps.primaryBookings &&
+    prevProps.isAdmin === nextProps.isAdmin
   );
 });
 
@@ -437,7 +451,7 @@ const FilterBar = memo(({
   const hasActiveFilters = localSearch || Object.values(filters).some(val => val !== "");
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-gray-200 mb-4">
+    <div className="bg-white/80 p-4 border border-gray-200 mb-4">
       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-end">
         <div className="flex-1 w-full">
           <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -450,7 +464,7 @@ const FilterBar = memo(({
               placeholder="Search bookings..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300"
             />
           </div>
         </div>
@@ -465,7 +479,7 @@ const FilterBar = memo(({
             <select
               value={filters[key]}
               onChange={(e) => handleFilterChange(key, e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-300 px-3 py-2"
             >
               <option value="">All {label}</option>
               {key === 'staff' && <option value="Unassigned">Unassigned</option>}
@@ -484,7 +498,7 @@ const FilterBar = memo(({
             type="date"
             value={filters.date}
             onChange={(e) => handleFilterChange('date', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full border border-gray-300 px-3 py-2"
           />
         </div>
 
@@ -492,7 +506,7 @@ const FilterBar = memo(({
           <div className="w-full lg:w-auto">
             <button
               onClick={clearFilters}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200"
             >
               <X className="w-4 h-4" />
               Clear
@@ -513,7 +527,7 @@ const FilterBar = memo(({
 
 FilterBar.displayName = 'FilterBar';
 
-export default function ScheduleBoard({
+export default memo(function ScheduleBoard({
   bookings,
   staffOptions,
   scheduleDate,
@@ -668,10 +682,10 @@ export default function ScheduleBoard({
     <>
       <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
 
-      <div className="relative overflow-hidden rounded-2xl bg-slate-50 border-2 border-gray-300 shadow-2xl backdrop-blur-sm mb-0">
+      <div className="relative overflow-hidden bg-slate-50 border-2 border-gray-300 mb-0">
         <div className="relative p-6 border-b-2 border-gray-300 bg-gradient-to-r from-gray-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg border-2 border-indigo-400">
+            <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 border-2 border-indigo-400">
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -735,4 +749,4 @@ export default function ScheduleBoard({
       </div>
     </>
   );
-}
+});

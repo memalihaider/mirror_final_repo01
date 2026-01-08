@@ -13,6 +13,9 @@ export type BookingStatus = "upcoming" | "past" | "cancelled";
 export interface PaymentDetail {
   method: string;
   amount: number;
+  cardNumber?: string;
+  cardholderName?: string;
+  referenceNumber?: string;
 }
 
 export interface Booking {
@@ -45,6 +48,7 @@ export interface BookingFormData {
   serviceTime: string;
   customerName: string;
   customerEmail: string;
+  trn?: string;
   paymentMethod: string; // Keep for backward compatibility
   paymentDetails: PaymentDetail[]; // New field for multiple payments
   customPaymentMethod: string;

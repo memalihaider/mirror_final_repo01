@@ -39,73 +39,35 @@ const ServiceRow = memo(({ service, index, serviceOptions, selectedCategory, sta
   const memoizedStaffOptions = useMemo(() => staffOptions, [staffOptions]);
 
   return (
-    <div className="grid grid-cols-12 gap-2 px-4 py-3 border-t">
-      <div className="col-span-3">
-        <select
-          className="w-full border rounded-md px-3 py-2"
-          value={service.serviceName}
-          onChange={(e) => handleChange("serviceName", e.target.value)}
-        >
-          <option value="">Select a service</option>
+    <div className={GRID_ROW} style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 1fr 2fr 1fr" }}>
+      <div>
+        <select className={SELECT_CLASS} value={service.serviceName} onChange={(e) => handleChange("serviceName", e.target.value)}>
+          <option value="">Service</option>
           {filteredServiceOptions.map((serviceOption: any) => (
-            <option key={serviceOption.id} value={serviceOption.name}>
-              {serviceOption.name}
-            </option>
+            <option key={serviceOption.id} value={serviceOption.name}>{serviceOption.name}</option>
           ))}
         </select>
       </div>
-      <div className="col-span-2">
-        <select
-          className="w-full border rounded-md px-3 py-2"
-          value={service.staffMember || ""}
-          onChange={(e) => handleChange("staffMember", e.target.value)}
-        >
-          <option value="">Select staff</option>
-          {memoizedStaffOptions.map((staff: string) => (
-            <option key={staff} value={staff}>
-              {staff}
-            </option>
-          ))}
+      <div>
+        <select className={SELECT_CLASS} value={service.staffMember || ""} onChange={(e) => handleChange("staffMember", e.target.value)}>
+          <option value="">Staff</option>
+          {memoizedStaffOptions.map((staff: string) => <option key={staff} value={staff}>{staff}</option>)}
         </select>
       </div>
-      <div className="col-span-2">
-        <input
-          type="number"
-          min={0}
-          className="w-full border rounded-md px-3 py-2"
-          value={service.duration}
-          onChange={(e) => handleChange("duration", Number(e.target.value || 0))}
-        />
+      <div>
+        <input type="number" min={0} className={INPUT_CLASS} placeholder="Duration" value={service.duration} onChange={(e) => handleChange("duration", Number(e.target.value || 0))} />
       </div>
-      <div className="col-span-2">
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          className="w-full border rounded-md px-3 py-2"
-          value={service.price}
-          onChange={(e) => handleChange("price", Number(e.target.value || 0))}
-        />
+      <div>
+        <input type="number" min={0} step="0.01" className={INPUT_CLASS} placeholder="Price" value={service.price} onChange={(e) => handleChange("price", Number(e.target.value || 0))} />
       </div>
-      <div className="col-span-1">
-        <input
-          type="number"
-          min={1}
-          className="w-full border rounded-md px-3 py-2"
-          value={service.quantity}
-          onChange={(e) => handleChange("quantity", Number(e.target.value || 1))}
-        />
+      <div>
+        <input type="number" min={1} className={INPUT_CLASS} placeholder="Qty" value={service.quantity} onChange={(e) => handleChange("quantity", Number(e.target.value || 1))} />
       </div>
-      <div className="col-span-1 flex justify-end items-center">
-        {showRemove && (
-          <button
-            onClick={handleRemoveClick}
-            className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors"
-            title="Remove"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
+      <div>
+        <input type="number" min={0} step="0.01" className={INPUT_CLASS} placeholder="Tip" value={(service as any).tip || 0} onChange={(e) => handleChange("tip", e.target.value)} />
+      </div>
+      <div className="flex justify-center items-center">
+        {showRemove && <button onClick={handleRemoveClick} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Remove"><Trash2 className="w-4 h-4" /></button>}
       </div>
     </div>
   );
@@ -115,17 +77,7 @@ ServiceRow.displayName = 'ServiceRow';
 
 // Memoized PaymentDetailRow component
 interface PaymentDetailRowProps {
-  payment: PaymentDetail;
-  index: number;
-  paymentMethods: any[];
-  onChange: (index: number, field: string, value: any) => void;
-  onRemove: (index: number) => void;
-  showRemove: boolean;
-}
-
-// Memoized PaymentDetailRow component - performance optimized
-interface PaymentDetailRowProps {
-  payment: PaymentDetail;
+  payment: PaymentDetail & { cardNumber?: string; cardholderName?: string; referenceNumber?: string };
   index: number;
   paymentMethods: any[];
   onChange: (index: number, field: string, value: any) => void;
@@ -147,54 +99,40 @@ const PaymentDetailRow = memo(({ payment, index, paymentMethods, onChange, onRem
     return paymentMethods.length > 0 ? paymentMethods : PAYMENT_METHODS;
   }, [paymentMethods]);
 
+  // Check if this is a card payment method
+  const isCardPayment = useMemo(() => {
+    const method = payment.method.toLowerCase();
+    return method.includes('card') || method.includes('credit') || method.includes('debit');
+  }, [payment.method]);
+
   return (
-    <div className="grid grid-cols-12 gap-2 px-4 py-3 border-t">
-      <div className="col-span-6">
-        <select
-          className="w-full border rounded-md px-3 py-2"
-          value={payment.method}
-          onChange={(e) => handleChange("method", e.target.value)}
-        >
-          <option value="">Select payment method</option>
-          {paymentMethods.length > 0
-            ? paymentMethods.map((method: any) => (
-                <option
-                  key={method.id}
-                  value={method.name || method.method || method.title || ""}
-                >
-                  {(method.name || method.method || method.title || "").toUpperCase()}
-                </option>
-              ))
-            : PAYMENT_METHODS.map((p) => (
-                <option key={p} value={p}>
-                  {p.toUpperCase()}
-                </option>
-              ))}
-        </select>
+    <>
+      <div className={GRID_ROW} style={{ gridTemplateColumns: "2fr 1.5fr 2fr 0.5fr" }}>
+        <div>
+          <select className={SELECT_CLASS} value={payment.method} onChange={(e) => handleChange("method", e.target.value)}>
+            <option value="">Method</option>
+            {paymentMethods.length > 0
+              ? paymentMethods.map((method: any) => <option key={method.id} value={method.name || method.method || method.title || ""}>{(method.name || method.method || method.title || "").toUpperCase()}</option>)
+              : PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+          </select>
+        </div>
+        <div>
+          <input type="text" className={INPUT_CLASS} placeholder="Ref #" value={(payment as any).referenceNumber || ""} onChange={(e) => handleChange("referenceNumber", e.target.value)} />
+        </div>
+        <div>
+          <input type="number" min={0} step="0.01" className={INPUT_CLASS} placeholder="Amount (AED)" value={payment.amount} onChange={(e) => handleChange("amount", Number(e.target.value || 0))} />
+        </div>
+        <div className="flex justify-center items-center">
+          {showRemove && <button onClick={handleRemoveClick} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Remove"><Trash2 className="w-4 h-4" /></button>}
+        </div>
       </div>
-      <div className="col-span-4">
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          className="w-full border rounded-md px-3 py-2"
-          placeholder="Amount (AED)"
-          value={payment.amount}
-          onChange={(e) => handleChange("amount", Number(e.target.value || 0))}
-        />
-      </div>
-      <div className="col-span-2 flex justify-end items-center">
-        {showRemove && (
-          <button
-            onClick={handleRemoveClick}
-            className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors"
-            title="Remove payment method"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-    </div>
+      {isCardPayment && (
+        <div className={`${GRID_ROW} bg-blue-50`} style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div><input type="text" className={INPUT_CLASS} placeholder="Cardholder Name" value={(payment as any).cardholderName || ""} onChange={(e) => handleChange("cardholderName", e.target.value)} /></div>
+          <div><input type="text" className={INPUT_CLASS} placeholder="Card # (XXXX-XXXX-XXXX-XXXX)" value={(payment as any).cardNumber || ""} onChange={(e) => { const value = e.target.value.replace(/[^0-9-]/g, ""); handleChange("cardNumber", value); }} maxLength={19} /></div>
+        </div>
+      )}
+    </>
   );
 });
 
@@ -236,6 +174,14 @@ const BRANCH_OPTIONS = Object.freeze([
 ] as const);
 
 const PAYMENT_METHODS = Object.freeze(["cash", "card", "tabby", "tamara", "apple pay", "google pay", "samsung wallet", "paypal", "american express", "ewallet STC pay", "bank transfer", "cash on delivery", "other"] as const);
+
+// Consistent styling classes for performance and maintainability
+const INPUT_CLASS = "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white";
+const SELECT_CLASS = "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white cursor-pointer";
+const LABEL_CLASS = "block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-tight";
+const GRID_SECTION = "border border-gray-200 rounded-lg overflow-hidden";
+const GRID_HEADER = "grid gap-0 px-4 py-2.5 bg-gradient-to-r from-gray-100 to-gray-50 border-b border-gray-200 text-xs font-bold text-gray-700 uppercase tracking-wide";
+const GRID_ROW = "grid gap-0 px-4 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition-colors";
 
 // Cached time slot generation function with memoization - performance optimized
 const generateTimeSlotsCache = new Map<string, string[]>();
@@ -321,6 +267,7 @@ export const BookingModal = memo(function BookingModal({
     serviceTime: "10:00",
     customerName: "",
     customerEmail: "",
+    trn: "",
     paymentMethod: "cash",
     paymentDetails: [{ method: "cash", amount: 0 }],
     customPaymentMethod: "",
@@ -351,6 +298,9 @@ export const BookingModal = memo(function BookingModal({
   const [selectedCategory, setSelectedCategory] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Track if component is mounted to prevent state updates on unmounted component
+  const isMountedRef = useMemo(() => ({ current: true }), []);
 
   // Memoized calculations - moved here to be available for validation
   const totals = useMemo(() => calcTotals(formData.services), [formData.services]);
@@ -492,7 +442,7 @@ export const BookingModal = memo(function BookingModal({
     }
 
     try {
-      setSaving(true);
+      if (isMountedRef.current) setSaving(true);
       // Update paymentMethod for backward compatibility
       const dataToSave = {
         ...formData,
@@ -500,14 +450,16 @@ export const BookingModal = memo(function BookingModal({
       };
       await onSave(dataToSave, editingId || undefined);
       // Close immediately without waiting for state updates
-      onClose();
+      if (isMountedRef.current) {
+        onClose();
+      }
     } catch (error) {
       console.error("Error saving booking:", error);
       alert("Failed to save booking");
     } finally {
-      setSaving(false);
+      if (isMountedRef.current) setSaving(false);
     }
-  }, [formData, editingId, validateForm, onSave, onClose]);
+  }, [formData, editingId, validateForm, onSave, onClose, isMountedRef]);
 
   // Optimized delete handler
   const handleDelete = useCallback(async () => {
@@ -515,414 +467,217 @@ export const BookingModal = memo(function BookingModal({
     if (!confirm("Delete this booking? This action cannot be undone.")) return;
 
     try {
-      setDeleting(true);
+      if (isMountedRef.current) setDeleting(true);
       await onDelete(editingId);
-      onClose();
+      if (isMountedRef.current) {
+        onClose();
+      }
     } catch (error) {
       console.error("Error deleting booking:", error);
       alert("Failed to delete booking");
     } finally {
-      setDeleting(false);
+      if (isMountedRef.current) setDeleting(false);
     }
-  }, [editingId, onDelete, onClose]);
+  }, [editingId, onDelete, onClose, isMountedRef]);
 
   // Optimized close handler
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isOpen]);
+
+  // Cleanup on unmount - prevent state updates on unmounted component
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [isMountedRef]);
+
   // Early return if not open
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex animate-fadeIn overflow-hidden">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-30"
+        className="fixed inset-0 bg-black/50 z-40 animate-fadeIn"
         onClick={handleClose}
       />
       
-      {/* Side Panel */}
-      <div className="relative w-full max-w-2xl h-full bg-white shadow-2xl flex flex-col">
+      {/* Side Panel - Fixed to right edge with smooth slide animation */}
+      <div className="relative w-full max-w-4xl h-screen bg-white flex flex-col ml-auto z-50 animate-slideInRight shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50 flex-shrink-0">
-          <h3 className="text-lg font-semibold">
-            {isEditing ? "Edit Schedule" : "Add Schedule"}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-gradient-to-r from-pink-600 to-pink-700 text-white flex-shrink-0">
+          <h3 className="text-lg font-bold tracking-tight">
+            {isEditing ? "\u270d\ufe0f Edit Booking" : "\u2795 New Booking"}
           </h3>
           <div className="flex items-center gap-2">
             {isEditing && (
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-60"
-                title="Delete booking"
-              >
+              <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded text-sm font-semibold transition-colors" title="Delete">
                 <Trash2 className="w-4 h-4" />
                 {deleting ? "Deleting..." : "Delete"}
               </button>
             )}
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600"
-              title="Close"
-              disabled={saving || deleting}
-            >
+            <button onClick={handleClose} className="text-white hover:bg-blue-800 p-1 rounded transition-colors" title="Close" disabled={saving || deleting}>
               <XCircle className="w-6 h-6" />
             </button>
           </div>
         </div>
 
         {/* Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Top selects */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Branch
-                </label>
-                <select
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.branch}
-                  onChange={(e) => handleInputChange('branch', e.target.value)}
-                >
-                  {BRANCH_OPTIONS.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Customer Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="Customer email"
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.customerEmail}
-                  onChange={(e) => handleInputChange('customerEmail', e.target.value)}
-                />
-              </div>
-
-              {/* Category Select */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Category
-                </label>
-                <select
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  <option value="">Select One</option>
-                  {serviceCategories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Staff
-                </label>
-                <select
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.staff}
-                  onChange={(e) => handleInputChange('staff', e.target.value)}
-                >
-                  <option value="">Select One</option>
-                  {staffOptions.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Date & Time */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Service Date
-                </label>
-                <input
-                  type="date"
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.serviceDate}
-                  onChange={(e) => handleInputChange('serviceDate', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Time Slot
-                </label>
-                <select
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.serviceTime}
-                  onChange={(e) => handleInputChange('serviceTime', e.target.value)}
-                >
-                  {filteredTimeSlots.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {toDisplayAMPM(slot)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Customer
-                </label>
-                <input
-                  type="text"
-                  placeholder="Customer name"
-                  className="mt-1 w-full border rounded-md px-3 py-2"
-                  value={formData.customerName}
-                  onChange={(e) => handleInputChange('customerName', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Services table */}
-            <div className="border rounded-lg">
-              <div className="grid grid-cols-13 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
-                <div className="col-span-3">Service</div>
-                <div className="col-span-2">Staff Member</div>
-                <div className="col-span-2">Duration (min)</div>
-                <div className="col-span-2">Price</div>
-                <div className="col-span-1">Qty</div>
-                <div className="col-span-2">Tip (AED)</div>
-                <div className="col-span-1 text-right">—</div>
-              </div>
-
-              {formData.services.map((s, idx) => (
-                <div className="grid grid-cols-13 gap-2 px-4 py-3 border-t" key={idx}>
-                  <div className="col-span-3">
-                    <select
-                      className="w-full border rounded-md px-3 py-2"
-                      value={s.serviceName}
-                      onChange={(e) => handleServiceChange(idx, "serviceName", e.target.value)}
-                    >
-                      <option value="">Select a service</option>
-                      {serviceOptions.filter((serviceOption: any) =>
-                        selectedCategory ? serviceOption.category === selectedCategory : true
-                      ).map((serviceOption: any) => (
-                        <option key={serviceOption.id} value={serviceOption.name}>
-                          {serviceOption.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <select
-                      className="w-full border rounded-md px-3 py-2"
-                      value={s.staffMember || ""}
-                      onChange={(e) => handleServiceChange(idx, "staffMember", e.target.value)}
-                    >
-                      <option value="">Select staff</option>
-                      {staffOptions.map((staff: string) => (
-                        <option key={staff} value={staff}>
-                          {staff}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-full border rounded-md px-3 py-2"
-                      value={s.duration}
-                      onChange={(e) => handleServiceChange(idx, "duration", Number(e.target.value || 0))}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      className="w-full border rounded-md px-3 py-2"
-                      value={s.price}
-                      onChange={(e) => handleServiceChange(idx, "price", Number(e.target.value || 0))}
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <input
-                      type="number"
-                      min={1}
-                      className="w-full border rounded-md px-3 py-2"
-                      value={s.quantity}
-                      onChange={(e) => handleServiceChange(idx, "quantity", Number(e.target.value || 1))}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      className="w-full border rounded-md px-3 py-2"
-                      placeholder="Tip (AED)"
-                      value={(s as any).tip || 0}
-                      onChange={(e) => handleServiceChange(idx, "tip", e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-1 flex justify-end items-center">
-                    {formData.services.length > 1 && (
-                      <button
-                        onClick={() => handleRemoveServiceRow(idx)}
-                        className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors"
-                        title="Remove"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {/* Discount + Total */}
-              <div className="px-4 py-3 border-t space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Discount (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      className="mt-1 w-full border rounded-md px-3 py-2"
-                      placeholder="Enter discount percentage"
-                      value={formData.discount || ""}
-                      onChange={(e) => handleInputChange('discount', Number(e.target.value) || 0)}
-                    />
-                  </div>
-
-                  <div className="flex flex-col justify-end">
-                    <div className="text-sm font-semibold text-gray-800">
-                      Final Total: AED {finalTotal.toFixed(2)}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Total Tip: AED {totals.totalTip.toFixed(2)}
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleAddServiceRow}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Service
-            </button>
-
-            {/* Payment Details Section */}
-            <div className="border rounded-lg">
-              <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-xs font-semibold">
-                <div className="col-span-6">Payment Method</div>
-                <div className="col-span-4">Amount (AED)</div>
-                <div className="col-span-2 text-right">—</div>
-              </div>
-
-              {formData.paymentDetails.map((payment, idx) => (
-                <PaymentDetailRow
-                  key={idx}
-                  payment={payment}
-                  index={idx}
-                  paymentMethods={paymentMethods}
-                  onChange={handlePaymentDetailChange}
-                  onRemove={handleRemovePaymentDetail}
-                  showRemove={formData.paymentDetails.length > 1}
-                />
-              ))}
-
-              {/* Payment Summary */}
-              <div className="px-4 py-3 border-t bg-gray-50">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">
-                    Total Payments: AED {totalPaid.toFixed(2)}
-                  </span>
-                  <span className="text-sm font-medium text-gray-700">
-                    Expected: AED {finalTotal.toFixed(2)}
-                  </span>
-                </div>
-                {paymentMismatch && (
-                  <div className="text-sm text-red-600 mt-1">
-                    ⚠️ Payment total does not match expected amount
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={handleAddPaymentDetail}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:text-green-800 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Payment Method
-            </button>
-
-            {/* Remarks & toggles */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Remarks (optional)
-                </label>
-                <textarea
-                  className="mt-1 w-full border rounded-md px-3 py-2 min-h-[80px]"
-                  value={formData.remarks}
-                  onChange={(e) => handleInputChange('remarks', e.target.value)}
-                />
-              </div>
-              <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3">
+            {/* Top Form Section */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-5 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Application Status
-                  </label>
-                  <select
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                  >
-                    <option value="upcoming">Approved (Upcoming)</option>
-                    <option value="past">Completed (Past)</option>
-                    <option value="cancelled">Cancelled</option>
+                  <label className={LABEL_CLASS}>Branch</label>
+                  <select className={SELECT_CLASS} value={formData.branch} onChange={(e) => handleInputChange('branch', e.target.value)}>
+                    {BRANCH_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>TRN</label>
+                  <input type="text" className={INPUT_CLASS} placeholder="Tax ID" value={(formData as any).trn || ""} onChange={(e) => handleInputChange('trn', e.target.value)} />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Email</label>
+                  <input type="email" className={INPUT_CLASS} placeholder="customer@email.com" value={formData.customerEmail} onChange={(e) => handleInputChange('customerEmail', e.target.value)} />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Category</label>
+                  <select className={SELECT_CLASS} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                    <option value="">All</option>
+                    {serviceCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Staff</label>
+                  <select className={SELECT_CLASS} value={formData.staff} onChange={(e) => handleInputChange('staff', e.target.value)}>
+                    <option value="">Select</option>
+                    {staffOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
             </div>
-          </div>
 
-        {/* Footer - Fixed at bottom */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            disabled={saving || deleting}
-          >
+            {/* Date & Time & Customer */}
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className={LABEL_CLASS}>Date</label>
+                <input type="date" className={INPUT_CLASS} value={formData.serviceDate} onChange={(e) => handleInputChange('serviceDate', e.target.value)} />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Time</label>
+                <select className={SELECT_CLASS} value={formData.serviceTime} onChange={(e) => handleInputChange('serviceTime', e.target.value)}>
+                  {filteredTimeSlots.map((slot) => <option key={slot} value={slot}>{toDisplayAMPM(slot)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Customer Name</label>
+                <input type="text" className={INPUT_CLASS} placeholder="Full name" value={formData.customerName} onChange={(e) => handleInputChange('customerName', e.target.value)} />
+              </div>
+            </div>
+
+            {/* Services Table */}
+            <div className={GRID_SECTION}>
+              <div className={GRID_HEADER} style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 1fr 2fr 1fr" }}>
+                <div>Service</div>
+                <div>Staff</div>
+                <div>Duration</div>
+                <div>Price</div>
+                <div>Qty</div>
+                <div>Tip</div>
+                <div className="text-center">×</div>
+              </div>
+              {formData.services.map((s, idx) => (
+                <div className={GRID_ROW} style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 1fr 2fr 1fr" }} key={idx}>
+                  <div>
+                    <select className={SELECT_CLASS} value={s.serviceName} onChange={(e) => handleServiceChange(idx, "serviceName", e.target.value)}>
+                      <option value="">Service</option>
+                      {serviceOptions.filter((serviceOption: any) => selectedCategory ? serviceOption.category === selectedCategory : true).map((serviceOption: any) => <option key={serviceOption.id} value={serviceOption.name}>{serviceOption.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <select className={SELECT_CLASS} value={s.staffMember || ""} onChange={(e) => handleServiceChange(idx, "staffMember", e.target.value)}>
+                      <option value="">Staff</option>
+                      {staffOptions.map((staff: string) => <option key={staff} value={staff}>{staff}</option>)}
+                    </select>
+                  </div>
+                  <div><input type="number" min={0} className={INPUT_CLASS} placeholder="30" value={s.duration} onChange={(e) => handleServiceChange(idx, "duration", Number(e.target.value || 0))} /></div>
+                  <div><input type="number" min={0} step="0.01" className={INPUT_CLASS} placeholder="0.00" value={s.price} onChange={(e) => handleServiceChange(idx, "price", Number(e.target.value || 0))} /></div>
+                  <div><input type="number" min={1} className={INPUT_CLASS} placeholder="1" value={s.quantity} onChange={(e) => handleServiceChange(idx, "quantity", Number(e.target.value || 1))} /></div>
+                  <div><input type="number" min={0} step="0.01" className={INPUT_CLASS} placeholder="0" value={(s as any).tip || 0} onChange={(e) => handleServiceChange(idx, "tip", e.target.value)} /></div>
+                  <div className="flex justify-center items-center">
+                    {formData.services.length > 1 && <button onClick={() => handleRemoveServiceRow(idx)} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Remove"><Trash2 className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+              ))}
+              <div className="px-3 py-2 bg-gray-50 grid gap-2" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+                <div><label className={LABEL_CLASS}>Discount %</label><input type="number" min="0" max="100" step="0.1" className={INPUT_CLASS} placeholder="0" value={formData.discount || ""} onChange={(e) => handleInputChange('discount', Number(e.target.value) || 0)} /></div>
+                <div className="flex items-end justify-center py-1.5"><span className="text-sm font-bold text-gray-800">Total: AED {finalTotal.toFixed(2)}</span></div>
+                <div><label className={LABEL_CLASS}>Tip Total</label><div className="py-2 px-3 bg-white border border-gray-300 rounded text-sm font-semibold text-gray-700">AED {totals.totalTip.toFixed(2)}</div></div>
+              </div>
+            </div>
+
+            <button onClick={handleAddServiceRow} className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+              <Plus className="w-3 h-3" />
+              Add Service
+            </button>
+
+            {/* Payment Details */}
+            <div className={GRID_SECTION}>
+              <div className={GRID_HEADER} style={{ gridTemplateColumns: "2fr 1.5fr 2fr 0.5fr" }}>
+                <div>Method</div>
+                <div>Ref #</div>
+                <div>Amount</div>
+                <div className="text-center">×</div>
+              </div>
+              {formData.paymentDetails.map((payment, idx) => (
+                <PaymentDetailRow key={idx} payment={payment} index={idx} paymentMethods={paymentMethods} onChange={handlePaymentDetailChange} onRemove={handleRemovePaymentDetail} showRemove={formData.paymentDetails.length > 1} />
+              ))}
+              <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 grid gap-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div className="text-xs font-bold text-gray-700">Paid: <span className="text-blue-600 font-semibold">AED {totalPaid.toFixed(2)}</span></div>
+                <div className="text-xs font-bold text-gray-700">Expected: <span className="text-blue-600 font-semibold">AED {finalTotal.toFixed(2)}</span></div>
+                {paymentMismatch && <div className="col-span-2 text-xs text-red-600 font-semibold">⚠️ Mismatch</div>}
+              </div>
+            </div>
+
+            <button onClick={handleAddPaymentDetail} className="flex items-center gap-2 px-3 py-1.5 text-xs text-green-600 hover:text-green-700 font-semibold transition-colors">
+              <Plus className="w-3 h-3" />
+              Add Payment
+            </button>
+
+            {/* Remarks & Status */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <label className={LABEL_CLASS}>Remarks</label>
+                <textarea className={`${INPUT_CLASS} resize-none`} rows={3} placeholder="Optional notes..." value={formData.remarks} onChange={(e) => handleInputChange('remarks', e.target.value)} />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Status</label>
+                <select className={SELECT_CLASS} value={formData.status} onChange={(e) => handleInputChange('status', e.target.value)}>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="past">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        <div className="px-5 py-2.5 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white flex justify-end gap-2 flex-shrink-0">
+          <button onClick={handleClose} className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors" disabled={saving || deleting}>
             Close
           </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-60"
-            disabled={saving || deleting}
-          >
-            {saving
-              ? isEditing
-                ? "Updating..."
-                : "Saving..."
-              : isEditing
-                ? "Update"
-                : "Save"}
+          <button onClick={handleSave} className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded transition-colors disabled:opacity-60" disabled={saving || deleting}>
+            {saving ? (isEditing ? "Updating..." : "Saving...") : (isEditing ? "Update" : "Save")}
           </button>
         </div>
       </div>

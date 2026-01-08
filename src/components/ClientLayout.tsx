@@ -110,6 +110,7 @@ export default function ClientLayout({
                     ? 'ml-14' // collapsed sidebar (56px)
                     : 'ml-72' // expanded sidebar (280px)
                 }
+                w-full
               `}
             >
               <div className="content-container max-w-full">{children}</div>

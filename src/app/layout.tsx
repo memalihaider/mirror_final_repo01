@@ -86,7 +86,7 @@ export default function RootLayout({
         {/* ClientLayout wraps everything except footer */}
         <ClientLayout>
           {children}
-          <WhatsAppSupportAgent />
+          {/* <WhatsAppSupportAgent /> */}
         </ClientLayout>
         
         {/* Footer outside ClientLayout as per original structure */}
